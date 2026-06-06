@@ -1,0 +1,90 @@
+# Byte-compiled / optimized / extension files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.dll
+
+# Build and packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+MANIFEST
+brainmint/_version.py
+
+# Test, lint, type, and coverage artifacts
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.pytype/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# Environments and local package managers
+.env
+.envrc
+.venv/
+venv/
+env/
+ENV/
+__pypackages__/
+.pdm-python
+.pdm-build/
+.pixi/
+
+# Editors and OS files
+.vscode/
+.idea/
+*.code-workspace
+.DS_Store
+Thumbs.db
+Desktop.ini
+*~
+.nfs*
+
+# Logs and job artifacts
+*.log
+*.out
+*.err
+slurm-*.out
+slurm-*.err
+job-*.out
+job-*.err
+*.sbatch
+*.slurm
+*.sl
+
+# Notebooks and local scratch
+.ipynb_checkpoints/
+scratch/
+tmp/
+*.tmp
+
+# BrainMint research artifacts that do not belong in the package repo
+/data/
+/models/
+/checkpoints/
+/outputs/
+/out/
+/_out*/
+/wandb/
+/lightning_logs/
+/nobackup_ds/
+/z_temp_data/
+/external/repos/
+/repos/
+*.ckpt
+*.pt
+*.pth
+*.nii
+*.nii.gz
+
+# Publishing credentials
+.pypirc
