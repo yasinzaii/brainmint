@@ -17,14 +17,14 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from brainmint.data.transforms.demographics import DemographicsConditioningd
 
 
-CONFIG_DIR = PROJECT_ROOT / "configs"
+CONFIG_DIR = PROJECT_ROOT / "tests" / "fixtures" / "configs"
 
 
 @pytest.fixture(scope="module")
 def demographics_config():
     """Load and resolve the demographics configuration."""
     with initialize_config_dir(str(CONFIG_DIR), version_base=None):
-        cfg = compose(config_name="dataset/demographics")
+        cfg = compose(config_name="data/minimal_demographics")
     return OmegaConf.to_container(cfg.dataset.conditioning.demographics_config, resolve=True)
 
 
@@ -192,8 +192,8 @@ def test_transform_runs_inside_brainscape_dataset(tmp_path, demographics_config,
             "+dataset.test_tf.extra_xforms_end=[${dataset.conditioning.modality_conditioning},${dataset.conditioning.demographics_conditioning}]",
         ]
 
-        cfg = compose(config_name="dataset/brainscape_test", overrides=overrides)
-        demographics_cfg = OmegaConf.load(CONFIG_DIR / "dataset" / "demographics.yaml")
+        cfg = compose(config_name="data/minimal_brainscape", overrides=overrides)
+        demographics_cfg = OmegaConf.load(CONFIG_DIR / "data" / "minimal_demographics.yaml")
 
         with open_dict(cfg.dataset.conditioning):
             cfg.dataset.conditioning.demographics_config = demographics_cfg.demographics_config
