@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """HA-GAN upstream generator builders."""
+
+from __future__ import annotations
 
 from torch import nn
 

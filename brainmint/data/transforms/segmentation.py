@@ -17,12 +17,12 @@ Key ideas:
 
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import torch
 import torch.nn.functional as F
 from monai.transforms import Transform
-
 
 
 def _as_float_tensor(x: Any) -> torch.Tensor:
@@ -84,7 +84,7 @@ class MakeBrainMaskd(Transform):
         self.drop_ref = bool(drop_ref)
         self.allow_missing_keys = bool(allow_missing_keys)
 
-    def __call__(self, data: Mapping[str, Any]) -> Dict[str, Any]:
+    def __call__(self, data: Mapping[str, Any]) -> dict[str, Any]:
         d = dict(data)
         if self.ref_key not in d:
             if self.allow_missing_keys:
@@ -120,8 +120,8 @@ class BraTSLabelToRegionsd(Transform):
         drop_seg: If True, remove `seg_key` after conversion.
         allow_missing_keys: If True, skip when seg_key missing.
     """
-    DEFAULT_LABEL_VALUES: Dict[str, int] = {"NCR": 1, "ED": 2, "ET": 3}
-    DEFAULT_UNIONS: Dict[str, Sequence[str]] = {
+    DEFAULT_LABEL_VALUES: dict[str, int] = {"NCR": 1, "ED": 2, "ET": 3}
+    DEFAULT_UNIONS: dict[str, Sequence[str]] = {
         "WT": ("NCR", "ED", "ET"),
         "TC": ("NCR", "ET"),
     }
@@ -131,8 +131,8 @@ class BraTSLabelToRegionsd(Transform):
         *,
         seg_key: str = "seg",
         regions_out: Sequence[str] = ("NCR", "ED", "ET"),
-        label_values: Optional[Mapping[str, int]] = None,
-        unions: Optional[Mapping[str, Sequence[str]]] = None,
+        label_values: Mapping[str, int] | None = None,
+        unions: Mapping[str, Sequence[str]] | None = None,
         dtype: str | torch.dtype = torch.float32,
         drop_seg: bool = False,
         allow_missing_keys: bool = False,
@@ -161,7 +161,7 @@ class BraTSLabelToRegionsd(Transform):
             default_unions = {str(k).upper(): tuple(str(x).upper() for x in v) for k, v in dict(unions).items()}
         self.unions = default_unions
 
-    def __call__(self, data: Mapping[str, Any]) -> Dict[str, Any]:
+    def __call__(self, data: Mapping[str, Any]) -> dict[str, Any]:
         d = dict(data)
         if self.seg_key not in d:
             if self.allow_missing_keys:
@@ -176,7 +176,7 @@ class BraTSLabelToRegionsd(Transform):
         seg_int = seg.long()
 
         # Build base masks lazily as needed
-        cache: Dict[str, torch.Tensor] = {}
+        cache: dict[str, torch.Tensor] = {}
 
         def get_base(region: str) -> torch.Tensor:
             r = region.upper()
@@ -238,9 +238,9 @@ class RandomSelectMaskAsImaged(Transform):
         *,
         source_keys: Sequence[str],
         out_key: str = "image",
-        choice_key: Optional[str] = "mask_kind",
-        weights: Optional[Sequence[float]] = None,
-        drop_keys: Optional[Sequence[str]] = None,
+        choice_key: str | None = "mask_kind",
+        weights: Sequence[float] | None = None,
+        drop_keys: Sequence[str] | None = None,
         allow_missing_keys: bool = False,
     ) -> None:
         self.source_keys = [str(k) for k in source_keys]
@@ -263,7 +263,7 @@ class RandomSelectMaskAsImaged(Transform):
         else:
             self.weights = None
 
-    def __call__(self, data: Mapping[str, Any]) -> Dict[str, Any]:
+    def __call__(self, data: Mapping[str, Any]) -> dict[str, Any]:
         d = dict(data)
 
         present = [k for k in self.source_keys if k in d]
@@ -333,7 +333,7 @@ class RandForegroundBBoxCropd(Transform):
         *,
         keys: Sequence[str] = ("image",),
         patch_size: Sequence[int] = (64, 64, 64),
-        ref_key: Optional[str] = None,
+        ref_key: str | None = None,
         allow_missing_keys: bool = False,
         fg_threshold: float = 0.5,
         pad_if_needed: bool = False,
@@ -361,7 +361,7 @@ class RandForegroundBBoxCropd(Transform):
         if x.dim() == 4:
             spatial = x.shape[1:]
             pad = []
-            for L, P in zip(reversed(spatial), reversed(self.patch_size)):
+            for L, P in zip(reversed(spatial), reversed(self.patch_size), strict=True):
                 if L >= P:
                     pad.extend([0, 0])
                 else:
@@ -375,7 +375,7 @@ class RandForegroundBBoxCropd(Transform):
         if x.dim() == 5:
             spatial = x.shape[2:]
             pad = []
-            for L, P in zip(reversed(spatial), reversed(self.patch_size)):
+            for L, P in zip(reversed(spatial), reversed(self.patch_size), strict=True):
                 if L >= P:
                     pad.extend([0, 0])
                 else:
@@ -426,7 +426,7 @@ class RandForegroundBBoxCropd(Transform):
         sz = choose(Z, Pz, zmin, zmax)
         return (sx, sy, sz)
 
-    def __call__(self, data: Mapping[str, Any]) -> Dict[str, Any]:
+    def __call__(self, data: Mapping[str, Any]) -> dict[str, Any]:
         d = dict(data)
 
         if self.ref_key not in d:

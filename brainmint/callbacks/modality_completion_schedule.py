@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Any
 
 import pytorch_lightning as pl
 
@@ -10,7 +11,7 @@ from brainmint.utils.schedules import PiecewiseSchedule
 logger = logging.getLogger(__name__)
 
 
-def _normalize_probs(probs: Mapping[str, float]) -> Dict[str, float]:
+def _normalize_probs(probs: Mapping[str, float]) -> dict[str, float]:
     out = {str(k): float(v) for k, v in dict(probs).items()}
     s = float(sum(max(0.0, v) for v in out.values()))
     if s <= 0.0:
@@ -31,7 +32,7 @@ def _iter_transforms(root: Any) -> Iterable[Any]:
         seen.add(id(current))
         yield current
 
-        children: List[Any] = []
+        children: list[Any] = []
         nested = getattr(current, "_transform", None)
         if nested is not None and nested is not current:
             children.append(nested)
@@ -51,8 +52,8 @@ def _iter_transforms(root: Any) -> Iterable[Any]:
         stack.extend(reversed(children))
 
 
-def _find_choice_states(dm: Any) -> List[Any]:
-    st: List[Any] = []
+def _find_choice_states(dm: Any) -> list[Any]:
+    st: list[Any] = []
     tf = getattr(dm, "train_tf", None)
     root = getattr(tf, "transform", None) or tf
     for t in _iter_transforms(root):
@@ -62,8 +63,8 @@ def _find_choice_states(dm: Any) -> List[Any]:
     return st
 
 
-def _find_sampling_states(dm: Any) -> List[Any]:
-    st: List[Any] = []
+def _find_sampling_states(dm: Any) -> list[Any]:
+    st: list[Any] = []
     tf = getattr(dm, "train_tf", None)
     root = getattr(tf, "transform", None) or tf
     for t in _iter_transforms(root):
@@ -88,9 +89,9 @@ class ModalityCompletionScheduleCallback(pl.Callback):
     def __init__(
         self,
         *,
-        bucket_schedule: Optional[Sequence[Mapping[str, Any]]] = None,
-        choice_schedule: Optional[Sequence[Mapping[str, Any]]] = None,
-        sampling_schedule: Optional[Sequence[Mapping[str, Any]]] = None,
+        bucket_schedule: Sequence[Mapping[str, Any]] | None = None,
+        choice_schedule: Sequence[Mapping[str, Any]] | None = None,
+        sampling_schedule: Sequence[Mapping[str, Any]] | None = None,
         update_on: str = "epoch_start",
         strict: bool = True,
         normalize_bucket_probs: bool = True,
@@ -113,10 +114,10 @@ class ModalityCompletionScheduleCallback(pl.Callback):
         self.choice_sched = PiecewiseSchedule(choice_schedule, name="choice_schedule")
         self.sampling_sched = PiecewiseSchedule(sampling_schedule, name="sampling_schedule")
 
-        self._choice_states: List[Any] = []
-        self._sampling_states: List[Any] = []
+        self._choice_states: list[Any] = []
+        self._sampling_states: list[Any] = []
 
-    def setup(self, trainer: pl.Trainer, pl_module: pl.LightningModule, stage: Optional[str] = None) -> None:
+    def setup(self, trainer: pl.Trainer, pl_module: pl.LightningModule, stage: str | None = None) -> None:
         if stage not in (None, "fit"):
             return
         dm = trainer.datamodule
@@ -185,7 +186,7 @@ class ModalityCompletionScheduleCallback(pl.Callback):
         if not isinstance(value, Mapping):
             raise TypeError(f"choice_schedule value must be a nested mapping, got {type(value)}")
 
-        updates: Dict[str, Any] = dict(value)
+        updates: dict[str, Any] = dict(value)
 
         for state in self._choice_states:
             cur = dict(state.get_choices())

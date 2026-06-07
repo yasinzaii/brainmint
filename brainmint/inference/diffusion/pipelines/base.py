@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Optional, Set
+from collections.abc import Mapping
+from typing import Any
 
 import torch
 
@@ -31,7 +32,7 @@ class LatentDiffusionGenerationPipeline(DiffusionPipeline):
     construction are handled outside the pipeline by the inference runner/config.
     """
 
-    required_modules: Set[str] = {"unet", "noise_scheduler"}
+    required_modules: set[str] = {"unet", "noise_scheduler"}
 
     def __init__(
         self,
@@ -39,10 +40,10 @@ class LatentDiffusionGenerationPipeline(DiffusionPipeline):
         latent_provider: LatentProvider,
         conditioning: ConditioningBuilder,
         sampler: DiffusionSampler,
-        postprocess: Optional[Postprocessor] = None,
+        postprocess: Postprocessor | None = None,
         decode: bool = True,
         scale_factor_key: str = "scale_factor",
-        expected_latent_channels: Optional[int] = None,
+        expected_latent_channels: int | None = None,
         force_float32_decode: bool = True,
     ) -> None:
         super().__init__()
@@ -58,7 +59,7 @@ class LatentDiffusionGenerationPipeline(DiffusionPipeline):
         if self.decode:
             self.required_modules = set(self.required_modules) | {"autoencoder"}
 
-    def get_required_modules(self) -> Set[str]:
+    def get_required_modules(self) -> set[str]:
         required = set(self.required_modules)
         required |= self.latent_provider.get_required_modules()
         required |= self.conditioning.get_required_modules()
@@ -80,7 +81,7 @@ class LatentDiffusionGenerationPipeline(DiffusionPipeline):
 
 
     @torch.no_grad()
-    def run(self, batch: Mapping[str, Any], *, ctx: InferenceContext) -> Dict[str, Any]:
+    def run(self, batch: Mapping[str, Any], *, ctx: InferenceContext) -> dict[str, Any]:
         _ = ctx.get("unet", required=True)
         _ = ctx.get("noise_scheduler", required=True)
         autoencoder = ctx.get("autoencoder", required=self.decode) if self.decode else None
@@ -103,7 +104,7 @@ class LatentDiffusionGenerationPipeline(DiffusionPipeline):
                 f"Sampler must return dict with key 'latent' -> Tensor, got keys={list(sample_dict.keys())}"
             )
 
-        out: Dict[str, Any] = {"latent": z, **{key: value for key, value in sample_dict.items() if key != "latent"}}
+        out: dict[str, Any] = {"latent": z, **{key: value for key, value in sample_dict.items() if key != "latent"}}
 
         if self.decode:
             scale_factor = float(ctx.scalar(self.scale_factor_key, 1.0))

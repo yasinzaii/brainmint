@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Literal
+from typing import Any, Literal
 
 import torch
 
@@ -14,7 +14,7 @@ def build_med_ddpm_mask_batch(
     image_size: int = 192,
     depth_size: int = 144,
     mask_mode: Literal["brain_ellipsoid", "full_brain"] = "brain_ellipsoid",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Build a no-BrainScape Med-DDPM inference batch.
 
     Med-DDPM is segmentation-mask conditioned. This helper creates a simple

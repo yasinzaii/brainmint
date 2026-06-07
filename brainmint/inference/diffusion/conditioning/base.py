@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Sequence, Set
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import torch
 from torch import nn
@@ -32,8 +33,8 @@ class ComposeConditioning(ConditioningBuilderBase):
         self.builders = nn.ModuleList(list(builders))
         self.allow_key_overwrite = bool(allow_key_overwrite)
 
-    def get_required_modules(self) -> Set[str]:
-        required: Set[str] = set()
+    def get_required_modules(self) -> set[str]:
+        required: set[str] = set()
         for builder in self.builders:
             required |= builder.get_required_modules()
         return required
@@ -44,8 +45,8 @@ class ComposeConditioning(ConditioningBuilderBase):
         *,
         latent_ref: torch.Tensor,
         ctx: InferenceContext,
-    ) -> Dict[str, torch.Tensor]:
-        out: Dict[str, torch.Tensor] = {}
+    ) -> dict[str, torch.Tensor]:
+        out: dict[str, torch.Tensor] = {}
         for builder in self.builders:
             current = builder.build(batch, latent_ref=latent_ref, ctx=ctx)
             if not isinstance(current, dict):

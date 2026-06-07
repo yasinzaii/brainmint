@@ -2,20 +2,19 @@ import json
 import sys
 from pathlib import Path
 
+import nibabel as nib
+import numpy as np
 import pytest
 import torch
 from hydra import compose, initialize_config_dir
 from hydra.utils import instantiate
-import nibabel as nib
-import numpy as np
 from omegaconf import OmegaConf, open_dict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from brainmint.data.transforms.demographics import DemographicsConditioningd
-from brainmint.models.conditioning.demographics_encoder import DemographicsEncoder
-
+from brainmint.data.transforms.demographics import DemographicsConditioningd  # noqa: E402
+from brainmint.models.conditioning.demographics_encoder import DemographicsEncoder  # noqa: E402
 
 CONFIG_DIR = PROJECT_ROOT / "configs"
 

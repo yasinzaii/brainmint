@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 import pytorch_lightning as pl
 import torch
@@ -28,16 +29,16 @@ class GenericInferenceModule(StateDictLoaderMixin, pl.LightningModule):
         *,
         pipeline: DiffusionPipeline,
         auto_load_wrapper_weights: bool = False,
-        modules: Optional[Dict[str, Any]] = None,
-        scalars: Optional[Dict[str, Any]] = None,
-        hparams: Optional[Dict[str, Any]] = None,
+        modules: dict[str, Any] | None = None,
+        scalars: dict[str, Any] | None = None,
+        hparams: dict[str, Any] | None = None,
     ) -> None:
         super().__init__()
         self.save_hyperparameters(dict(hparams or {}), ignore=["pipeline", "modules"])
         self.pipeline = pipeline
         self.auto_load_wrapper_weights = bool(auto_load_wrapper_weights)
 
-        self._modules_dict: Dict[str, Any] = dict(modules or {})
+        self._modules_dict: dict[str, Any] = dict(modules or {})
         # Register nn.Modules as proper submodules to participate in .to(device) and weight loading.
         for k, v in list(self._modules_dict.items()):
             if isinstance(v, nn.Module):
@@ -47,18 +48,18 @@ class GenericInferenceModule(StateDictLoaderMixin, pl.LightningModule):
                     )
                 setattr(self, k, v)
 
-        self._scalars: Dict[str, Any] = dict(scalars or {})
+        self._scalars: dict[str, Any] = dict(scalars or {})
 
-    def setup(self, stage: Optional[str] = None) -> None:
+    def setup(self, stage: str | None = None) -> None:
         super().setup(stage)
         if self.auto_load_wrapper_weights:
             for _name, _mod in self._modules_dict.items():
-                if hasattr(_mod, "load_weights") and callable(getattr(_mod, "load_weights")):
+                if hasattr(_mod, "load_weights") and callable(_mod.load_weights):
                     log.info("Auto-loading wrapper weights for module '%s'", _name)
                     _mod.load_weights()
         self._validate_requirements()
 
-    def build_context(self, *, device: Optional[torch.device] = None) -> InferenceContext:
+    def build_context(self, *, device: torch.device | None = None) -> InferenceContext:
         dev = device or next(self.parameters()).device
         dtype = next(self.parameters()).dtype
         return InferenceContext(device=dev, dtype=dtype, modules=self._modules_dict, scalars=self._scalars)
@@ -73,6 +74,6 @@ class GenericInferenceModule(StateDictLoaderMixin, pl.LightningModule):
             raise KeyError(f"GenericInferenceModule missing required context keys: {missing}. Available: {sorted(ctx.modules.keys())}")
 
     @torch.no_grad()
-    def run(self, batch: Mapping[str, Any], *, device: Optional[torch.device] = None) -> Dict[str, Any]:
+    def run(self, batch: Mapping[str, Any], *, device: torch.device | None = None) -> dict[str, Any]:
         ctx = self.build_context(device=device)
         return self.pipeline.run(batch, ctx=ctx)

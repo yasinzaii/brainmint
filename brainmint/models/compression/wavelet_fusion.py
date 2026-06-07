@@ -1,17 +1,15 @@
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
 from collections.abc import Sequence
+from pathlib import Path
+from typing import Any
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from monai.networks.blocks import Convolution, SpatialAttentionBlock, Upsample
-
 from monai.networks.nets.autoencoderkl import (
-    AutoencoderKL,
     AEKLDownsample,
     AEKLResBlock,
+    AutoencoderKL,
 )
 from monai.utils import ensure_tuple_rep
 
@@ -125,7 +123,7 @@ class TwoStageWaveletFusion(nn.Module):
 
     def forward(
         self, x: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         
         c = self.in_channels                          # [B, 8C, D/2, H/2, W/2]
         stage1_coeffs = self.stage1(x)
@@ -244,7 +242,7 @@ class WaveletFusionEncoder(nn.Module):
         
 
         self.stages = nn.ModuleList()
-        blocks: List[nn.Module] = []
+        blocks: list[nn.Module] = []
 
         # Residual and downsampling blocks
         output_channel = channels[0]
@@ -411,7 +409,7 @@ class WaveletFusionDecoder(nn.Module):
 
         self.stages = nn.ModuleList()
         
-        blocks: List[nn.Module] = []
+        blocks: list[nn.Module] = []
 
         # Initial convolution
         blocks.append(
@@ -683,8 +681,8 @@ class WaveletFusionVAE(nn.Module):
         *,
         autoencoder: nn.Module,
         ckpt_path: str | Path,
-        state_key: Optional[str] = "autoencoder",
-        loader: Optional[str] = None,
+        state_key: str | None = "autoencoder",
+        loader: str | None = None,
         strict: bool | str = True,
         freeze: bool = True,
         set_eval: bool = True,

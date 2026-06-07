@@ -1,19 +1,18 @@
 # tests/test_vae_loss_manager.py
+import importlib
 import sys
 from pathlib import Path
 
-import torch
 import pytest
+import torch
 from hydra import compose, initialize_config_dir
 from hydra.utils import instantiate
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 CONFIG_DIR = PROJECT_ROOT / "configs"
 
 
-import importlib, sys, pathlib
 m = importlib.import_module("brainmint.losses.vae_loss_manager")
 print("Module OK, VaeLossManager:", getattr(m, "VaeLossManager", None))
 

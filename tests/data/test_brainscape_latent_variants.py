@@ -1,26 +1,22 @@
 import json
-from pathlib import Path
 import sys
-
-import json
+from pathlib import Path
 
 import numpy as np
-import torch
 import pytest
+import torch
 from hydra import compose, initialize_config_dir
 from hydra.utils import instantiate
 
-from pathlib import Path
-
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
-CONFIG_DIR = PROJECT_ROOT / "configs"
+CONFIG_DIR = PROJECT_ROOT / "tests" / "fixtures" / "configs"
 
 
 def build_simple_tf():
     import torch
-    from monai.transforms import Compose, LoadImaged, EnsureChannelFirstd, EnsureTyped, Lambdad
+    from monai.transforms import Compose, EnsureChannelFirstd, EnsureTyped, Lambdad, LoadImaged
+
     from brainmint.data.transforms.conditioning import MapModalityToLabeld
     return Compose([
         LoadImaged(keys=["image", "latent"]),
@@ -35,9 +31,8 @@ def _make_json(tmp_path: Path, with_image: bool = False) -> tuple[Path, Path]:
     root = tmp_path / "ds_root"
     (root / "ds1" / "preprocessed").mkdir(parents=True)
 
-    (root / "ds1" / "latent").mkdir(parents=True)
     lat = np.random.rand(1, 4, 4, 4).astype("float32")
-    np.save(root / "ds1" / "latent" / "lat.npy", lat)
+    np.save(root / "ds1" / "preprocessed" / "lat.npy", lat)
 
     rec = {"dataset": "ds1", "latent": {"t1w": "lat.npy"}, "subject": "s1"}
     if with_image:
@@ -71,7 +66,7 @@ def test_brainscape_latent_variants(tmp_path, with_conditioning, assert_keys):
 
             "dataset.brainscape.modalities=[t1w]",
 
-            "dataset.brainscape.input_specs=[{key:latent,group:latent}]",
+            "dataset.brainscape.input_specs=[{key:latent,group:latent,modalities:[t1w]}]",
 
             "dataset.train_tf._target_=brainmint.data.transforms.mri_vae.VAETransform",
             "dataset.train_tf.is_train=false",
@@ -92,7 +87,7 @@ def test_brainscape_latent_variants(tmp_path, with_conditioning, assert_keys):
             overrides.append(
                 "dataset.conditioning.modality_conditioning.key_name=class_labels"
             )
-        cfg = compose(config_name="dataset/brainscape_test", overrides=overrides)
+        cfg = compose(config_name="data/minimal_brainscape", overrides=overrides)
         dm = instantiate(cfg.dataset.brainscape)
         dm.setup()
         batch = next(iter(dm.train_dataloader()))
@@ -115,9 +110,9 @@ def test_brainscape_latent_and_image_with_conditioning(tmp_path):
             "dataset.brainscape.modalities=[t1w]",
 
 
-            "dataset.brainscape.input_specs=[{key:image,group:preprocessed},{key:latent,group:latent}]",
+            "dataset.brainscape.input_specs=[{key:image,group:preprocessed,modalities:[t1w]},{key:latent,group:latent,modalities:[t1w]}]",
         ]
-        cfg = compose(config_name="dataset/brainscape_test", overrides=overrides)
+        cfg = compose(config_name="data/minimal_brainscape", overrides=overrides)
         dm = instantiate(cfg.dataset.brainscape)
         tf = build_simple_tf()
         dm._tf["train"] = tf
@@ -141,7 +136,7 @@ def test_brainscape_extra_only(tmp_path):
             "dataset.brainscape.test_batch_size=1",
 
 
-            "dataset.brainscape.input_specs=[{key:latent,group:latent}]",
+            "dataset.brainscape.input_specs=[{key:latent,group:latent,modalities:[t1w]}]",
             "dataset.brainscape.modalities=[t1w]",
             "dataset.train_tf._target_=brainmint.data.transforms.mri_vae.VAETransform",
             "dataset.train_tf.is_train=false",
@@ -156,7 +151,7 @@ def test_brainscape_extra_only(tmp_path):
             "dataset.val_tf=${dataset.train_tf}",
             "dataset.test_tf=${dataset.train_tf}",
         ]
-        cfg = compose(config_name="dataset/brainscape_test", overrides=overrides)
+        cfg = compose(config_name="data/minimal_brainscape", overrides=overrides)
         dm = instantiate(cfg.dataset.brainscape)
         dm.setup()
         batch = next(iter(dm.train_dataloader()))

@@ -11,6 +11,7 @@ PACKAGE_SAFE_PREFIXES = (
     "tests/package/",
     "tests/external/",
     "tests/utils/",
+    "tests/data/"
 )
 
 

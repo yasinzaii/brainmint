@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from collections.abc import Sequence as ABCSequence
-from typing import Any, Dict, Mapping, Union
+from typing import Any
 
 import torch
 
@@ -18,8 +19,8 @@ except Exception:  # pragma: no cover
     OmegaConf = None  # type: ignore
 
 
-Scalar = Union[int, float, bool]
-Value = Union[Scalar, ABCSequence, torch.Tensor]
+Scalar = int | float | bool
+Value = Scalar | ABCSequence | torch.Tensor
 
 
 class ConstantConditioning(ConditioningBuilderBase):
@@ -90,9 +91,9 @@ class ConstantConditioning(ConditioningBuilderBase):
         *,
         latent_ref: torch.Tensor,
         ctx: InferenceContext,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         b = int(latent_ref.shape[0])
-        out: Dict[str, torch.Tensor] = {}
+        out: dict[str, torch.Tensor] = {}
 
         for k, v0 in self.constants.items():
             v = v0

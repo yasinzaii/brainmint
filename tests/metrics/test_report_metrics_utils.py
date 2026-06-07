@@ -5,7 +5,6 @@ from __future__ import annotations
 import math
 import sys
 from pathlib import Path
-from typing import List
 
 import torch
 
@@ -13,10 +12,10 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from experiments.metrics.autoencoder import report_metrics as rm
+from experiments.metrics.autoencoder import report_metrics as rm  # noqa: E402
 
 
-def _split_cells(line: str) -> List[str]:
+def _split_cells(line: str) -> list[str]:
     return [cell.strip() for cell in line.split("|")]
 
 

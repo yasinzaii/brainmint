@@ -1,9 +1,10 @@
-from __future__ import annotations
-
 """BraSyn / BrainLesion MissingMRI NIfTI and tensor IO helpers."""
 
+from __future__ import annotations
+
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Optional, Sequence
+from typing import Any
 
 import numpy as np
 import torch
@@ -67,11 +68,11 @@ def _read_nifti(path: str | Path) -> tuple[np.ndarray, dict[str, Any]]:
     return np.asarray(data, dtype=np.float32), meta
 
 
-def _write_nifti(data: np.ndarray, path: str | Path, *, affine: Optional[np.ndarray] = None) -> None:
+def _write_nifti(data: np.ndarray, path: str | Path, *, affine: np.ndarray | None = None) -> None:
     NiftiWriter(affine=affine, dtype=np.float32).write(np.asarray(data, dtype=np.float32), path)
 
 
-def _extract_filename_from_tensor(t: torch.Tensor) -> Optional[str]:
+def _extract_filename_from_tensor(t: torch.Tensor) -> str | None:
     """Best-effort extraction of the original filename from a MONAI MetaTensor."""
 
     meta = getattr(t, "meta", None) or {}
@@ -83,7 +84,7 @@ def _extract_filename_from_tensor(t: torch.Tensor) -> Optional[str]:
     return None
 
 
-def _affine_from_tensor(t: torch.Tensor) -> Optional[np.ndarray]:
+def _affine_from_tensor(t: torch.Tensor) -> np.ndarray | None:
     """Best-effort extraction of an affine matrix from a MONAI MetaTensor."""
 
     meta = getattr(t, "meta", None) or {}
@@ -96,14 +97,14 @@ def _affine_from_tensor(t: torch.Tensor) -> Optional[np.ndarray]:
         return None
 
 
-def _create_zero(shape_hwd: Sequence[int], out_path: str | Path, *, affine: Optional[np.ndarray] = None) -> None:
+def _create_zero(shape_hwd: Sequence[int], out_path: str | Path, *, affine: np.ndarray | None = None) -> None:
     """Create a zero-valued NIfTI with the requested shape and affine."""
 
     zero = np.zeros(tuple(int(x) for x in shape_hwd), dtype=np.float32)
     _write_nifti(zero, out_path, affine=affine)
 
 
-def _tensor_to_nifti(x_b1hwd: torch.Tensor, out_path: str | Path, *, affine: Optional[np.ndarray] = None) -> None:
+def _tensor_to_nifti(x_b1hwd: torch.Tensor, out_path: str | Path, *, affine: np.ndarray | None = None) -> None:
     """Save a ``(B, 1, H, W, D)`` tensor as a NIfTI volume."""
 
     x_b1hwd = ensure_b1hwd(x_b1hwd).detach().cpu()
@@ -132,20 +133,20 @@ def _nifti_to_tensor(path: str | Path) -> torch.Tensor:
     return torch.from_numpy(data).unsqueeze(0).unsqueeze(0)
 
 
-def load_nifti(path: str | Path) -> tuple[np.ndarray, Optional[np.ndarray]]:
+def load_nifti(path: str | Path) -> tuple[np.ndarray, np.ndarray | None]:
     """Load a NIfTI volume and affine through BrainMint IO."""
 
     data, meta = _read_nifti(path)
     return data, meta.get("affine")
 
 
-def save_nifti(path: str | Path, data: np.ndarray, affine: Optional[np.ndarray]) -> None:
+def save_nifti(path: str | Path, data: np.ndarray, affine: np.ndarray | None) -> None:
     """Save a NIfTI volume through BrainMint IO."""
 
     _write_nifti(data, path, affine=affine)
 
 
-def create_zero_nifti_like(reference_path: str | Path, out_path: str | Path) -> tuple[Path, Optional[np.ndarray]]:
+def create_zero_nifti_like(reference_path: str | Path, out_path: str | Path) -> tuple[Path, np.ndarray | None]:
     """Create a zero-valued NIfTI with the same shape and affine as a reference."""
 
     data, meta = _read_nifti(reference_path)

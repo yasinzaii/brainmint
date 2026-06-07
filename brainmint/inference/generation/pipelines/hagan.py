@@ -1,32 +1,33 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Optional, Sequence, Set, ClassVar
+from collections.abc import Mapping, Sequence
+from typing import Any, ClassVar
 
 import torch
 
-from brainmint.utils.batch import infer_batch_size
 from brainmint.inference.core.context import InferenceContext
 from brainmint.inference.core.interfaces import DiffusionPipeline, Postprocessor
+from brainmint.utils.batch import infer_batch_size
 from brainmint.utils.spatial import center_crop_or_pad_zyx
 
 
 class HaGANGenerationPipeline(DiffusionPipeline):
     """Pipeline to generate samples with HA-GAN."""
 
-    required_modules: ClassVar[Set[str]] = {"hagan"}
+    required_modules: ClassVar[set[str]] = {"hagan"}
 
     def __init__(
         self,
         *,
-        output_size_zyx: Optional[Sequence[int]] = None,
-        postprocess: Optional[Postprocessor] = None,
+        output_size_zyx: Sequence[int] | None = None,
+        postprocess: Postprocessor | None = None,
     ) -> None:
         super().__init__()
         self.output_size_zyx = list(output_size_zyx) if output_size_zyx is not None else None
         self.postprocess = postprocess
 
     @torch.no_grad()
-    def run(self, batch: Mapping[str, Any], *, ctx: InferenceContext) -> Dict[str, Any]:
+    def run(self, batch: Mapping[str, Any], *, ctx: InferenceContext) -> dict[str, Any]:
         model = ctx.get("hagan", required=True)
         if not hasattr(model, "sample"):
             raise TypeError("Context module 'hagan' must expose a .sample(batch_size=...) method.")

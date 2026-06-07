@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Spatial tensor helpers for inference volumes."""
+
+from __future__ import annotations
 
 from collections.abc import Sequence
 

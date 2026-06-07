@@ -1,4 +1,5 @@
-from typing import Any, Dict, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 import torch
 
@@ -22,8 +23,8 @@ class ClassLabelsConditioning(ConditioningBuilderBase):
         *,
         in_key: str = "modality_map",
         out_key: str = "class_labels",
-        num_classes: Optional[int] = None,
-        mapping: Optional[Mapping[str, int]] = None,
+        num_classes: int | None = None,
+        mapping: Mapping[str, int] | None = None,
         fail_on_unknown: bool = True,
     ) -> None:
         super().__init__()
@@ -39,7 +40,7 @@ class ClassLabelsConditioning(ConditioningBuilderBase):
         *,
         latent_ref: torch.Tensor,
         ctx: InferenceContext,  # noqa: ARG002
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         if self.in_key not in batch:
             raise KeyError(f"Batch missing key '{self.in_key}'")
 

@@ -1,8 +1,9 @@
-from __future__ import annotations
-
 """Batch-shape helpers for inference runners and pipelines."""
 
-from typing import Any, Mapping
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any
 
 import torch
 

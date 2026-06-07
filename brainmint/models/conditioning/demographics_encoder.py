@@ -1,4 +1,5 @@
-from typing import Any, Dict, Mapping, List, Optional, Tuple
+from collections.abc import Mapping
+from typing import Any
 
 import torch
 import torch.nn as nn
@@ -42,7 +43,7 @@ class DemographicsEncoder(nn.Module):
         dem_embed_dim: int,
         default_cat_embed_dim: int = 8,
         default_ynd_embed_dim: int = 3,
-        hidden_dim: Optional[int] = None,
+        hidden_dim: int | None = None,
     ) -> None:
         super().__init__()
 
@@ -58,22 +59,22 @@ class DemographicsEncoder(nn.Module):
             raise TypeError(
                 "DemographicsEncoder: config['ordered_fields'] must be provided and non-empty"
             )
-        self.ordered_fields: List[str] = list(ordered_fields)
+        self.ordered_fields: list[str] = list(ordered_fields)
         if not self.ordered_fields:
             raise ValueError("DemographicsEncoder: ordered_fields must be non-empty")
 
         # map field_name -> index in demo_values/demo_missing
-        self.field_indices: Dict[str, int] = {
+        self.field_indices: dict[str, int] = {
             name: i for i, name in enumerate(self.ordered_fields)
         }
 
         # Keep track of which indices are numeric vs categorical vs YND
-        self.numeric_indices: List[int] = []
-        self.cat_fields: List[Tuple[str, int]] = []  # (name, index in demo_values)
-        self.ynd_fields: List[Tuple[str, int]] = []  # (name, index in demo_values)
+        self.numeric_indices: list[int] = []
+        self.cat_fields: list[tuple[str, int]] = []  # (name, index in demo_values)
+        self.ynd_fields: list[tuple[str, int]] = []  # (name, index in demo_values)
 
-        cat_embeddings: Dict[str, nn.Embedding] = {}
-        ynd_embeddings: Dict[str, nn.Embedding] = {}
+        cat_embeddings: dict[str, nn.Embedding] = {}
+        ynd_embeddings: dict[str, nn.Embedding] = {}
 
         for name in self.ordered_fields:
             if name not in fields_cfg:
@@ -207,7 +208,7 @@ class DemographicsEncoder(nn.Module):
                 f"{len(self.ordered_fields)} ordered_fields"
             )
 
-        parts: List[torch.Tensor] = []
+        parts: list[torch.Tensor] = []
 
         # 1) numeric scalars (z-scored, already prepared by the transform)
         if self.numeric_indices:
@@ -216,7 +217,7 @@ class DemographicsEncoder(nn.Module):
 
         # 2) categorical embeddings
         if self.cat_fields:
-            cat_embs: List[torch.Tensor] = []
+            cat_embs: list[torch.Tensor] = []
             for name, idx in self.cat_fields:
                 ids = demo_values[:, idx].long()  # indices encoded by transform
                 cat_embs.append(self.cat_embeddings[name](ids))
@@ -225,7 +226,7 @@ class DemographicsEncoder(nn.Module):
 
         # 3) YND embeddings
         if self.ynd_fields:
-            ynd_embs: List[torch.Tensor] = []
+            ynd_embs: list[torch.Tensor] = []
             for name, idx in self.ynd_fields:
                 ids = demo_values[:, idx].long()
                 ynd_embs.append(self.ynd_embeddings[name](ids))

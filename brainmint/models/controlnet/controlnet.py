@@ -4,10 +4,10 @@ from collections.abc import Sequence
 
 import torch
 import torch.nn as nn
+from monai.networks.nets.diffusion_model_unet import get_timestep_embedding
 
 # Local ControlNet wrapper allows us to control time embedding dimensions for concatenated conditioning.
 from .controlnet_monai import ControlNet as MONAIControlNet
-from monai.networks.nets.diffusion_model_unet import get_timestep_embedding
 
 
 class ControlNet(MONAIControlNet):
@@ -186,7 +186,7 @@ class ControlNet(MONAIControlNet):
     def _apply_controlnet_blocks(self, h, down_block_res_samples):
         # 6. Control net blocks
         controlnet_down_block_res_samples = []
-        for down_block_res_sample, controlnet_block in zip(down_block_res_samples, self.controlnet_down_blocks):
+        for down_block_res_sample, controlnet_block in zip(down_block_res_samples, self.controlnet_down_blocks, strict=True):
             down_block_res_sample = controlnet_block(down_block_res_sample)
             controlnet_down_block_res_samples.append(down_block_res_sample)
 

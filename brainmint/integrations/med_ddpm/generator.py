@@ -1,9 +1,8 @@
-from __future__ import annotations
-
 """Med-DDPM upstream generator builders."""
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Optional
 
 from torch import nn
 
@@ -21,8 +20,8 @@ def build_med_ddpm_diffusion(
     timesteps: int = 250,
     with_condition: bool = True,
     out_channels: int = 4,
-    state_key: Optional[str] = "ema",
-    loader: Optional[str] = None,
+    state_key: str | None = "ema",
+    loader: str | None = None,
     strict: bool | str = True,
     freeze: bool = True,
     set_eval: bool = True,

@@ -34,11 +34,10 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 import torch
-from torch import nn
-
 from monai.networks.blocks import Convolution
 from monai.networks.nets.diffusion_model_unet import get_down_block, get_mid_block, get_timestep_embedding
 from monai.utils import ensure_tuple_rep
+from torch import nn
 
 
 class ControlNetConditioningEmbedding(nn.Module):
@@ -413,7 +412,7 @@ class ControlNet(nn.Module):
         # 6. Control net blocks
         controlnet_down_block_res_samples = []
 
-        for down_block_res_sample, controlnet_block in zip(down_block_res_samples, self.controlnet_down_blocks):
+        for down_block_res_sample, controlnet_block in zip(down_block_res_samples, self.controlnet_down_blocks, strict=True):
             down_block_res_sample = controlnet_block(down_block_res_sample)
             controlnet_down_block_res_samples.append(down_block_res_sample)
 

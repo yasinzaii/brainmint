@@ -3,14 +3,13 @@
 
 import math
 from collections import defaultdict
-from typing import Dict, Iterable, List, Mapping, MutableMapping, Sequence, Tuple
+from collections.abc import Iterable, Mapping, MutableMapping, Sequence
 
 import numpy as np
 import torch
 from monai.losses import PerceptualLoss
-from monai.metrics import MSEMetric, PSNRMetric, SSIMMetric, MultiScaleSSIMMetric
+from monai.metrics import MSEMetric, MultiScaleSSIMMetric, PSNRMetric, SSIMMetric
 from monai.utils import MetricReduction
-
 
 
 class ReconstructionMetricCalculator:
@@ -36,7 +35,7 @@ class ReconstructionMetricCalculator:
             to both metrics for consistency with MONAI's API.
     """
 
-    METRIC_NAMES: Tuple[str, ...] = ("lpips", "ssim", "ms_ssim", "psnr", "mse")
+    METRIC_NAMES: tuple[str, ...] = ("lpips", "ssim", "ms_ssim", "psnr", "mse")
 
     def __init__(
         self,
@@ -74,10 +73,10 @@ class ReconstructionMetricCalculator:
         self._lpips_device: torch.device | None = None
 
     @property
-    def metric_names(self) -> Tuple[str, ...]:
+    def metric_names(self) -> tuple[str, ...]:
         return self.METRIC_NAMES
 
-    def compute_batch(self, predictions: torch.Tensor, targets: torch.Tensor) -> List[Dict[str, float]]:
+    def compute_batch(self, predictions: torch.Tensor, targets: torch.Tensor) -> list[dict[str, float]]:
         """Return metric dictionaries for each item in the batch."""
 
         if predictions.shape != targets.shape:
@@ -118,7 +117,7 @@ class ReconstructionMetricCalculator:
         ms_ssim_vals = self._compute_ms_ssim(preds_in_range, refs_in_range)
         lpips_vals = self._compute_lpips(preds_in_range, refs_in_range)
 
-        batch_metrics: List[Dict[str, float]] = []
+        batch_metrics: list[dict[str, float]] = []
         for idx in range(batch_size):
             batch_metrics.append(
                 {
@@ -295,7 +294,7 @@ class ReconstructionMetricCalculator:
         lpips_preds = lpips_preds.to(device)
         lpips_refs = lpips_refs.to(device)
 
-        results: List[float] = []
+        results: list[float] = []
         with torch.no_grad():
             for idx in range(lpips_preds.shape[0]):
                 value = self._lpips_metric(lpips_preds[idx : idx + 1], lpips_refs[idx : idx + 1])
@@ -305,7 +304,7 @@ class ReconstructionMetricCalculator:
 
     def _prepare_lpips_inputs(
         self, preds: torch.Tensor, refs: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Normalise tensors into the [-1, 1] range expected by LPIPS."""
         preds_lpips = preds.detach().clone()
         refs_lpips = refs.detach().clone()
@@ -367,7 +366,7 @@ class ReconstructionMetricCalculator:
     def _validate_numerics(self, preds: torch.Tensor, refs: torch.Tensor) -> None:
         tensors = (preds, refs)
         names = ("predictions", "targets")
-        for tensor, name in zip(tensors, names):
+        for tensor, name in zip(tensors, names, strict=True):
             if not torch.isfinite(tensor).all():
                 raise ValueError(f"{name.capitalize()} contain NaN or Inf values.")
 
@@ -379,11 +378,11 @@ class MetricAggregator:
         self, metric_names: Sequence[str], modalities: Sequence[str] | None = None
     ) -> None:
         self.metric_names = tuple(metric_names)
-        self._storage: MutableMapping[str, MutableMapping[str, List[float]]] = defaultdict(
+        self._storage: MutableMapping[str, MutableMapping[str, list[float]]] = defaultdict(
             lambda: defaultdict(list)
         )
         self._counts: MutableMapping[str, int] = defaultdict(int)
-        self._order: List[str] = []
+        self._order: list[str] = []
         self._overall_key = "overall"
         self._storage[self._overall_key]
 
@@ -431,8 +430,8 @@ class MetricAggregator:
         if key != self._overall_key:
             self._counts[self._overall_key] += 1
 
-    def summary_rows(self) -> List[Dict[str, float]]:
-        rows: List[Dict[str, float]] = []
+    def summary_rows(self) -> list[dict[str, float]]:
+        rows: list[dict[str, float]] = []
         ordered_keys = list(self._order) + [self._overall_key]
         seen: set[str] = set()
         for key in ordered_keys:
@@ -440,7 +439,7 @@ class MetricAggregator:
                 continue
             seen.add(key)
             metrics = self._storage.get(key, {})
-            row: Dict[str, float] = {
+            row: dict[str, float] = {
                 "modality": self._format_modality(key),
                 "count": int(self._counts.get(key, 0)),
             }

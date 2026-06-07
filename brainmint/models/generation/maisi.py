@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Dict, Mapping, Optional, Sequence, Union
+from typing import Any
 
 import torch
 from omegaconf import DictConfig, OmegaConf  # type: ignore
@@ -18,22 +19,22 @@ class MAISI3DWrapperConfig:
     """BrainMint-facing config for MAISI / NV-Generate-MR generation."""
 
     # Network definitions as Hydra _target_ mappings.
-    autoencoder_def: Optional[Mapping[str, Any]] = None
-    diffusion_unet_def: Optional[Mapping[str, Any]] = None
-    noise_scheduler_def: Optional[Mapping[str, Any]] = None
+    autoencoder_def: Mapping[str, Any] | None = None
+    diffusion_unet_def: Mapping[str, Any] | None = None
+    noise_scheduler_def: Mapping[str, Any] | None = None
 
     # Checkpoints
     autoencoder_ckpt_path: str = ""
     diffusion_ckpt_path: str = ""
-    autoencoder_state_key: Optional[str] = "unet_state_dict"
-    diffusion_state_key: Optional[str] = "unet_state_dict"
+    autoencoder_state_key: str | None = "unet_state_dict"
+    diffusion_state_key: str | None = "unet_state_dict"
     strict: bool | str = True
     freeze: bool = True
     set_eval: bool = True
 
     # Sampling settings
     num_inference_steps: int = 1000
-    latent_channels: Optional[int] = None
+    latent_channels: int | None = None
     latent_divisor: int = 4
 
     # Output size / spacing (ZYX order to match GenMriStudy generation pipelines)
@@ -43,14 +44,14 @@ class MAISI3DWrapperConfig:
     # Constant conditioning (MONAI MAISI style)
     top_region_index: Sequence[float] = (1.0, 0.0, 0.0, 0.0)
     bottom_region_index: Sequence[float] = (1.0, 0.0, 0.0, 0.0)
-    modality: Union[str, int] = "mri_t1"
-    modality_mapping_override: Optional[Dict[str, int]] = None
+    modality: str | int = "mri_t1"
+    modality_mapping_override: dict[str, int] | None = None
     body_region: Sequence[str] = ("head",)
     anatomy_list: Sequence[str] = ("brain",)
-    label_dict_json: Optional[str] = None
+    label_dict_json: str | None = None
 
     # Scale factor fallback when the diffusion checkpoint does not store one.
-    scale_factor: Optional[float] = None
+    scale_factor: float | None = None
 
     # Optional clamp if downstream expects unit-range output.
     clamp_unit_range: bool = False
@@ -59,7 +60,7 @@ class MAISI3DWrapperConfig:
     autocast: bool = True
 
     # Optional deterministic seed
-    seed: Optional[int] = None
+    seed: int | None = None
 
 
 def _to_config(cfg: Any) -> Any:
@@ -79,13 +80,13 @@ class MAISI3DWrapper(nn.Module):
         super().__init__()
         self.cfg = _to_config(cfg)
         self._device_ref = nn.Parameter(torch.empty(0), requires_grad=False)
-        self.sampler: Optional[MAISISampler] = None
+        self.sampler: MAISISampler | None = None
 
         # Compatibility attributes for callers that inspect loaded modules.
-        self.autoencoder: Optional[nn.Module] = None
-        self.unet: Optional[nn.Module] = None
-        self.noise_scheduler: Optional[Any] = None
-        self.scale_factor: Optional[torch.Tensor] = None
+        self.autoencoder: nn.Module | None = None
+        self.unet: nn.Module | None = None
+        self.noise_scheduler: Any | None = None
+        self.scale_factor: torch.Tensor | None = None
         self._loaded = False
 
     def load_weights(self) -> None:
@@ -113,12 +114,12 @@ class MAISI3DWrapper(nn.Module):
     @torch.no_grad()
     def sample(
         self,
-        batch: Optional[Mapping[str, Any]] = None,
+        batch: Mapping[str, Any] | None = None,
         *,
         batch_size: int,
-        ctx: Optional[Any] = None,
-        device: Optional[torch.device] = None,
-        dtype: Optional[torch.dtype] = None,
+        ctx: Any | None = None,
+        device: torch.device | None = None,
+        dtype: torch.dtype | None = None,
     ) -> torch.Tensor:
         """Generate a batch of synthetic volumes. Returns ``(B,1,Z,Y,X)``."""
 

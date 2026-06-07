@@ -1,14 +1,13 @@
 import sys
-import glob
-import pytest
 from pathlib import Path
 
-import torch
+import pytest
 import pytorch_lightning as pl
+import torch
 from hydra import compose, initialize_config_dir
 from hydra.utils import instantiate
-from omegaconf import DictConfig, OmegaConf, open_dict
 from monai.data import CacheDataset, DataLoader
+from omegaconf import OmegaConf, open_dict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -118,7 +117,7 @@ def test_vae_fast_loop(tmp_path, shape):
 
         # Instantiate callbacks/loggers from Hydra config
         callbacks = [instantiate(c) for c in cfg.callbacks.vae_callbacks]
-        loggers   = [instantiate(l) for l in cfg.get("loggers", [])]
+        loggers   = [instantiate(logger_cfg) for logger_cfg in cfg.get("loggers", [])]
 
         batch = next(iter(dm.train_dataloader()))
         x = batch["image"]

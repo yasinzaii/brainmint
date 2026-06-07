@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Mapping, Optional, Sequence
+from collections.abc import Mapping, Sequence
 
 import torch
 
@@ -26,11 +26,11 @@ class ReorientCropPostprocess(Postprocessor):
     def __init__(
         self,
         *,
-        roi_size_zyx: Optional[Sequence[int]] = None,
-        spatial_permute: Optional[Sequence[int]] = None,
+        roi_size_zyx: Sequence[int] | None = None,
+        spatial_permute: Sequence[int] | None = None,
         rot90_k: int = 0,
         rot90_plane: str = "yx",
-        flips: Optional[Mapping[str, bool]] = None,
+        flips: Mapping[str, bool] | None = None,
     ) -> None:
         super().__init__()
 
@@ -49,7 +49,7 @@ class ReorientCropPostprocess(Postprocessor):
         self.rot90_k = int(rot90_k)
         self.rot90_plane = str(rot90_plane).lower()
 
-        self.flips: Dict[str, bool] = {"z": False, "y": False, "x": False}
+        self.flips: dict[str, bool] = {"z": False, "y": False, "x": False}
         if flips:
             for k, v in flips.items():
                 kk = str(k).lower()
@@ -57,7 +57,7 @@ class ReorientCropPostprocess(Postprocessor):
                     raise ValueError(f"Unknown flip axis '{k}'. Allowed: z,y,x")
                 self.flips[kk] = bool(v)
 
-    def process(self, x: torch.Tensor, *, ctx: Optional[InferenceContext] = None) -> torch.Tensor:
+    def process(self, x: torch.Tensor, *, ctx: InferenceContext | None = None) -> torch.Tensor:
         # Accept (C,Z,Y,X) or (B,C,Z,Y,X)
         squeeze_b = False
         if x.dim() == 4:

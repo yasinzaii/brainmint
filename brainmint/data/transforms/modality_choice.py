@@ -32,8 +32,9 @@ from __future__ import annotations
 
 import logging
 import multiprocessing as mp
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Dict, Mapping, Optional, Sequence
+from typing import Any
 
 import torch
 from monai.transforms import Transform
@@ -54,7 +55,7 @@ class SharedChoiceState:
         and replaced wholesale on updates (epoch-boundary).
     """
 
-    choices: Dict[str, Any]
+    choices: dict[str, Any]
     epoch: int = 0
     seed: int = 0
     shared: bool = False
@@ -70,7 +71,7 @@ class SharedChoiceState:
             self._mgr = None
             self._store = {"choices": dict(self.choices), "epoch": int(self.epoch), "seed": int(self.seed)}
 
-    def __getstate__(self) -> Dict[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         # IMPORTANT:
         # - When shared=True, keep the manager proxy (_store) so workers see updates.
         # - Never try to pickle the Manager object itself (_mgr).
@@ -105,7 +106,7 @@ class SharedChoiceState:
         self.epoch = self.get_epoch()
         self.seed = self.get_seed()
         
-    def get_choices(self) -> Dict[str, Any]:
+    def get_choices(self) -> dict[str, Any]:
         return dict(self._store["choices"])
 
     def set_choices(self, choices: Mapping[str, Any]) -> None:
@@ -151,13 +152,13 @@ class ChooseStreamForModalitiesd(Transform):
         self,
         *,
         modalities: Sequence[str],
-        all_modalities: Optional[Sequence[str]] = None,
-        is_synthetic_key: Optional[str] = "is_mod_synthetic",
+        all_modalities: Sequence[str] | None = None,
+        is_synthetic_key: str | None = "is_mod_synthetic",
         synthetic_stream_keys: Sequence[str] | str = "synthetic",
-        choices: Optional[Mapping[str, Any]] = None,
-        state: Optional[SharedChoiceState] = None,
+        choices: Mapping[str, Any] | None = None,
+        state: SharedChoiceState | None = None,
         drop_bucket: bool = True,
-        out_key_map: Optional[Mapping[str, str]] = None,
+        out_key_map: Mapping[str, str] | None = None,
     ) -> None:
         self.modalities = _lower_list(modalities)
 
@@ -187,10 +188,10 @@ class ChooseStreamForModalitiesd(Transform):
         else:
             self.state = SharedChoiceState(choices=dict(choices or {}), epoch=0, seed=0, shared=False)
 
-    def _get_choices(self) -> Dict[str, Any]:
+    def _get_choices(self) -> dict[str, Any]:
         return self.state.get_choices()
 
-    def __call__(self, data: Mapping[str, Any]) -> Dict[str, Any]:
+    def __call__(self, data: Mapping[str, Any]) -> dict[str, Any]:
         d = dict(data)
 
         bucket = str(d.get("bucket", "__default__"))
@@ -244,7 +245,7 @@ class ChooseStreamForModalitiesd(Transform):
             primary_stream = str(stream_keys[0])
             synthetic_flags[mod] = primary_stream in self.synthetic_stream_keys
 
-            for idx, stream_name in enumerate(stream_keys):
+            for _idx, stream_name in enumerate(stream_keys):
                 stream_name = str(stream_name)
                 if stream_name not in d:
                     raise KeyError(f"Missing stream '{stream_name}' for modality '{mod}' in bucket '{bucket}'.")

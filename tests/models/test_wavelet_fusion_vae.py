@@ -1,8 +1,8 @@
 import sys
 from pathlib import Path
 
-import torch
 import pytest
+import torch
 from hydra import compose, initialize_config_dir
 from hydra.utils import instantiate
 

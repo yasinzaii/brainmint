@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
-
-from omegaconf import DictConfig, OmegaConf
+from typing import Any
 
 import torch
+from omegaconf import DictConfig, OmegaConf
 from torch import nn
 
 from brainmint.inference.core.context import InferenceContext
@@ -30,8 +29,8 @@ class MedDDPMConfig:
     out_channels: int = 4
 
     # Checkpoint loading. The public BraTS checkpoint stores EMA weights under ``ema``.
-    state_key: Optional[str] = "ema"
-    loader: Optional[str] = None
+    state_key: str | None = "ema"
+    loader: str | None = None
     strict: bool | str = True
     freeze: bool = True
     set_eval: bool = True
@@ -40,7 +39,7 @@ class MedDDPMConfig:
 class MedDDPMGenerator(nn.Module):
     """BrainMint-facing wrapper around the official Med-DDPM BraTS sampler."""
 
-    def __init__(self, *, cfg: Optional[MedDDPMConfig] = None, **kwargs: Any) -> None:
+    def __init__(self, *, cfg: MedDDPMConfig | None = None, **kwargs: Any) -> None:
         super().__init__()
 
         if isinstance(cfg, DictConfig):
@@ -58,7 +57,7 @@ class MedDDPMGenerator(nn.Module):
             raise ValueError("Med-DDPM checkpoint path is required: ckpt_path")
         self.cfg = cfg
 
-        self.diffusion: Optional[nn.Module] = None
+        self.diffusion: nn.Module | None = None
         self._weights_loaded = False
 
     def load_weights(self) -> None:
@@ -89,9 +88,9 @@ class MedDDPMGenerator(nn.Module):
         self,
         *,
         condition_tensors: torch.Tensor,
-        batch_size: Optional[int] = None,
-        ctx: Optional[InferenceContext] = None,
-        device: Optional[torch.device] = None,
+        batch_size: int | None = None,
+        ctx: InferenceContext | None = None,
+        device: torch.device | None = None,
     ) -> torch.Tensor:
         """Generate all four BraTS modalities conditioned on one-hot masks.
 

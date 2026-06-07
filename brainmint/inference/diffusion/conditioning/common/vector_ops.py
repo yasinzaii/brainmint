@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Tuple
-
 import torch
 
 
@@ -25,7 +23,7 @@ def to_context(vec_bc: torch.Tensor) -> torch.Tensor:
     return vec_bc.unsqueeze(1)
 
 
-def expand_to_spatial(vec_bc: torch.Tensor, spatial: Tuple[int, int, int]) -> torch.Tensor:
+def expand_to_spatial(vec_bc: torch.Tensor, spatial: tuple[int, int, int]) -> torch.Tensor:
     """(B,C) -> (B,C,Z,Y,X) by broadcasting."""
     vec_bc = as_2d(vec_bc, name="vec_bc")
     b, c = vec_bc.shape

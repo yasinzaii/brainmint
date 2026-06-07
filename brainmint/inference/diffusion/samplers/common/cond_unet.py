@@ -1,4 +1,4 @@
-from typing import Mapping, Optional
+from collections.abc import Mapping
 
 import torch
 
@@ -40,19 +40,19 @@ class DiffusionUNetTimestepSampler(TimestepSamplerBase):
     ) -> torch.Tensor:
         unet = ctx.get("unet", required=True)
 
-        class_labels: Optional[torch.Tensor] = conditioning.get(self.class_labels_key)
+        class_labels: torch.Tensor | None = conditioning.get(self.class_labels_key)
         if class_labels is not None:
             if class_labels.ndim != 1:
                 raise ValueError(f"{self.class_labels_key} must have shape (B,), got {tuple(class_labels.shape)}")
             class_labels = class_labels.to(device=ctx.device, dtype=torch.long)
 
-        demographics: Optional[torch.Tensor] = conditioning.get(self.demographics_key)
+        demographics: torch.Tensor | None = conditioning.get(self.demographics_key)
         if demographics is not None:
             if demographics.ndim != 2:
                 raise ValueError(f"{self.demographics_key} must have shape (B,D), got {tuple(demographics.shape)}")
             demographics = demographics.to(device=ctx.device, dtype=x.dtype)
 
-        context: Optional[torch.Tensor] = conditioning.get(self.context_key)
+        context: torch.Tensor | None = conditioning.get(self.context_key)
         if context is not None:
             context = context.to(device=ctx.device, dtype=x.dtype)
 

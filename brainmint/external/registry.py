@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from typing import Dict
-
 from .repo_manager import RepoSpec
 
 # External model repositories managed outside the BrainMint package.
-REPOS: Dict[str, RepoSpec] = {
+REPOS: dict[str, RepoSpec] = {
 
     "ha_gan": RepoSpec(
         name="ha_gan",

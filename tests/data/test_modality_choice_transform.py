@@ -1,27 +1,30 @@
 from __future__ import annotations
 
 import pytest
-
 import torch
 
-from brainmint.data.transforms.modality_choice import ChooseStreamForModalitiesd, SharedChoiceState, SharedSamplingState
+from brainmint.data.transforms.modality_choice import ChooseStreamForModalitiesd, SharedChoiceState
+
+ALL_MODALITIES = ["t1w", "t2w", "flair", "t1ce"]
 
 
 def test_choose_stream_with_probs() -> None:
-    # Two sources for t2w. Deterministic selection is driven by record_id.
+    # Two sources for t2w. Selection is stochastic but constrained by choices.
     tf = ChooseStreamForModalitiesd(
         modalities=["t1w", "t2w"],
-        stream_keys=["image", "synthetic"],
-        probs={
+        all_modalities=ALL_MODALITIES,
+        choices={
             "s_real": {
-                "t2w": {"image": 0.7, "synthetic": 0.3},
-                "*": {"image": 1.0},
+                "t2w": {
+                    "streams": {"image": "image", "synthetic": "synthetic"},
+                    "probs": {"image": 0.7, "synthetic": 0.3},
+                },
+                "*": {"streams": {"image": "image"}, "probs": {"image": 1.0}},
             }
         },
-        deterministic=False,
-        synthetic_streams=["synthetic"],
-        require_probs_for_multi_source=True,
+        synthetic_stream_keys=["synthetic"],
         drop_bucket=False,
+        out_key_map={"image": "image", "synthetic": "image"},
     )
 
     sample = {
@@ -32,33 +35,30 @@ def test_choose_stream_with_probs() -> None:
     }
 
     out = tf(sample)
-    assert out["t1w"] == "t1_real.nii.gz"
-    assert out["t2w"] in ("t2_real.nii.gz", "t2_syn.nii.gz")
-    assert out["chosen_stream_ids"].shape == (2,)
-    assert out["chosen_is_synthetic"].shape == (2,)
+    assert out["image"]["t1w"] == "t1_real.nii.gz"
+    assert out["image"]["t2w"] in ("t2_real.nii.gz", "t2_syn.nii.gz")
+    assert out["is_mod_synthetic"].shape == (4,)
     assert out["bucket"] == "s_real"
 
 
 def test_missing_modality_raises() -> None:
     tf = ChooseStreamForModalitiesd(
         modalities=["t2w"],
-        stream_keys=["image", "synthetic"],
-        probs={"b": {"t2w": {"image": 1.0}}},
-        deterministic=False,
-        require_probs_for_multi_source=True,
+        all_modalities=ALL_MODALITIES,
+        choices={"b": {"t2w": {"streams": {"image": "image"}, "probs": {"image": 1.0}}}},
+        out_key_map={"image": "image"},
     )
     sample = {"record_id": "x", "bucket": "b", "image": {"t1w": "t1.nii.gz"}}
-    with pytest.raises(KeyError, match="Missing modality"):
+    with pytest.raises(KeyError, match="t2w"):
         tf(sample)
 
 
 def test_multi_source_requires_probs_when_enabled() -> None:
     tf = ChooseStreamForModalitiesd(
         modalities=["t2w"],
-        stream_keys=["image", "synthetic"],
-        probs={},  # empty
-        deterministic=False,
-        require_probs_for_multi_source=True,
+        all_modalities=ALL_MODALITIES,
+        choices={"b": {"t2w": {"streams": {"image": "image", "synthetic": "synthetic"}, "probs": {}}}},
+        out_key_map={"image": "image", "synthetic": "image"},
     )
     sample = {
         "record_id": "x",
@@ -66,19 +66,23 @@ def test_multi_source_requires_probs_when_enabled() -> None:
         "image": {"t2w": "t2_real.nii.gz"},
         "synthetic": {"t2w": "t2_syn.nii.gz"},
     }
-    with pytest.raises(ValueError, match="No probs defined"):
+    with pytest.raises(ValueError, match="sum of weights"):
         tf(sample)
 
 
 def test_state_updates_are_observed() -> None:
-    state = SharedChoiceState(probs={"s_real": {"t2w": {"image": 1.0}}}, epoch=0, seed=0, shared=False)
+    state = SharedChoiceState(
+        choices={"s_real": {"t2w": {"streams": {"image": "image"}, "probs": {"image": 1.0}}}},
+        epoch=0,
+        seed=0,
+        shared=False,
+    )
 
     tf = ChooseStreamForModalitiesd(
         modalities=["t2w"],
-        stream_keys=["image", "synthetic"],
+        all_modalities=ALL_MODALITIES,
         state=state,
-        deterministic=False,
-        require_probs_for_multi_source=True,
+        out_key_map={"image": "image", "synthetic": "image"},
     )
 
     sample = {
@@ -88,22 +92,25 @@ def test_state_updates_are_observed() -> None:
         "synthetic": {"t2w": "t2_syn.nii.gz"},
     }
 
-    assert tf(sample)["t2w"] == "t2_real.nii.gz"
+    assert tf(sample)["image"]["t2w"] == "t2_real.nii.gz"
 
-    state.set_probs({"s_real": {"t2w": {"synthetic": 1.0}}})
-    assert tf(sample)["t2w"] == "t2_syn.nii.gz"
+    state.set_choices({"s_real": {"t2w": {"streams": {"synthetic": "synthetic"}, "probs": {"synthetic": 1.0}}}})
+    assert tf(sample)["image"]["t2w"] == "t2_syn.nii.gz"
 
 
 def test_outputs_synthetic_mask_correctly() -> None:
     tf = ChooseStreamForModalitiesd(
         modalities=["t1w", "t2w"],
-        stream_keys=["image", "synthetic"],
-        probs={"b": {"t2w": {"synthetic": 1.0}, "*": {"image": 1.0}}},
-        deterministic=False,
-        synthetic_streams=["synthetic"],
-        require_probs_for_multi_source=True,
+        all_modalities=ALL_MODALITIES,
+        choices={
+            "b": {
+                "t2w": {"streams": {"synthetic": "synthetic"}, "probs": {"synthetic": 1.0}},
+                "*": {"streams": {"image": "image"}, "probs": {"image": 1.0}},
+            }
+        },
+        synthetic_stream_keys=["synthetic"],
         drop_bucket=True,
-        modalities_all=["t1w", "t2w", "flair", "t1ce"],
+        out_key_map={"image": "image", "synthetic": "image"},
     )
 
     sample = {
@@ -114,23 +121,16 @@ def test_outputs_synthetic_mask_correctly() -> None:
     }
 
     out = tf(sample)
-    assert out["chosen_is_synthetic"].tolist() == [0, 1]
-    assert out["chosen_is_synthetic_full"].tolist() == [0, 1, 0, 0]
+    assert out["is_mod_synthetic"].tolist() == [0, 1, 0, 0]
     assert "bucket" not in out
 
 
-def test_partial_sampling_applies_when_sigma_available() -> None:
-    torch.manual_seed(0)
-    state = SharedSamplingState(config={"sigma_prob": 1.0, "sigma_alpha": 1.0}, shared=False)
+def test_stream_list_carries_sigma_when_available() -> None:
     tf = ChooseStreamForModalitiesd(
         modalities=["t1w"],
-        stream_keys=["latent"],
-        probs={},
-        deterministic=False,
-        require_probs_for_multi_source=False,
-        sample_latents=True,
-        sigma_pairing={"latent": "latent_sigma"},
-        sampling_state=state,
+        all_modalities=ALL_MODALITIES,
+        choices={"b": {"t1w": {"streams": {"latent": ["latent", "latent_sigma"]}, "probs": {"latent": 1.0}}}},
+        out_key_map={"latent": "latent", "latent_sigma": "latent_sigma"},
     )
 
     z_mu = torch.zeros(1, 2, 2, 2)
@@ -143,19 +143,16 @@ def test_partial_sampling_applies_when_sigma_available() -> None:
     }
 
     out = tf(sample)
-    assert not torch.allclose(out["t1w"], z_mu)
+    assert torch.allclose(out["latent"]["t1w"], z_mu)
+    assert torch.allclose(out["latent_sigma"]["t1w"], z_sigma)
 
 
-def test_partial_sampling_missing_sigma_falls_back() -> None:
+def test_single_stream_without_sigma_falls_back() -> None:
     tf = ChooseStreamForModalitiesd(
         modalities=["t1w"],
-        stream_keys=["latent"],
-        probs={},
-        deterministic=False,
-        require_probs_for_multi_source=False,
-        sample_latents=True,
-        sigma_pairing={"latent": "latent_sigma"},
-        require_sigma_for_sampling=False,
+        all_modalities=ALL_MODALITIES,
+        choices={"b": {"t1w": {"streams": {"latent": "latent"}, "probs": {"latent": 1.0}}}},
+        out_key_map={"latent": "latent"},
     )
 
     z_mu = torch.zeros(1, 2, 2, 2)
@@ -166,4 +163,4 @@ def test_partial_sampling_missing_sigma_falls_back() -> None:
     }
 
     out = tf(sample)
-    assert torch.allclose(out["t1w"], z_mu)
+    assert torch.allclose(out["latent"]["t1w"], z_mu)

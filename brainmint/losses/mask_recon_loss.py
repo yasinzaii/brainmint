@@ -1,6 +1,5 @@
 
 
-from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -32,7 +31,7 @@ class MaskReconLoss(nn.Module):
         self,
         bce_weight: float = 1.0,
         dice_weight: float = 1.0,
-        pos_weight: Optional[float] = None,
+        pos_weight: float | None = None,
         smooth: float = 1e-5,
         reduction: str = "mean",
         clamp_target: bool = False,

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any, Dict, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 import torch
-from torch import nn
 
 from brainmint.inference.core.context import InferenceContext
 from brainmint.inference.core.interfaces import DiffusionSampler, LatentInput
@@ -44,7 +44,7 @@ class TimestepSamplerBase(DiffusionSampler):
         latent: LatentInput,
         conditioning: Mapping[str, torch.Tensor],
         ctx: InferenceContext,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         scheduler = ctx.get("noise_scheduler", required=True)
 
         ref = latent.ref

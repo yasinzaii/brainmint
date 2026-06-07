@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Optional
+from typing import Any
 
 import torch
 
@@ -37,7 +38,7 @@ class InferenceContext:
     scalars: Mapping[str, Any] = field(default_factory=dict)
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
-    def get(self, key: str, *, required: bool = False) -> Optional[Any]:
+    def get(self, key: str, *, required: bool = False) -> Any | None:
         v = self.modules.get(key)
         if required and v is None:
             raise KeyError(f"InferenceContext missing required key '{key}'. Available: {sorted(self.modules.keys())}")
@@ -49,12 +50,12 @@ class InferenceContext:
     def with_updates(
         self,
         *,
-        modules: Optional[Mapping[str, Any]] = None,
-        scalars: Optional[Mapping[str, Any]] = None,
-        metadata: Optional[Mapping[str, Any]] = None,
-        device: Optional[torch.device] = None,
-        dtype: Optional[torch.dtype] = None,
-    ) -> "InferenceContext":
+        modules: Mapping[str, Any] | None = None,
+        scalars: Mapping[str, Any] | None = None,
+        metadata: Mapping[str, Any] | None = None,
+        device: torch.device | None = None,
+        dtype: torch.dtype | None = None,
+    ) -> InferenceContext:
         new_modules = dict(self.modules)
         if modules:
             new_modules.update(dict(modules))

@@ -1,20 +1,20 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping, Optional, Union
+from typing import Any
 
 import numpy as np
 
-
-PathLike = Union[str, Path]
+PathLike = str | Path
 
 
 class ReaderBase(ABC):
     """Base class for readers used by inference scripts."""
 
     @abstractmethod
-    def read(self, path: PathLike, *, meta: Optional[Mapping[str, Any]] = None) -> np.ndarray:
+    def read(self, path: PathLike, *, meta: Mapping[str, Any] | None = None) -> np.ndarray:
         raise NotImplementedError
 
 

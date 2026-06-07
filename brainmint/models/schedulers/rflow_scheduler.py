@@ -1,6 +1,7 @@
 import torch.nn as nn
 from monai.networks.schedulers.rectified_flow import RFlowScheduler as _RFlow
 
+
 class RFlowSchedulerModule(nn.Module):
     """
     Lightning-safe wrapper that *constructs* MONAI's RFlowScheduler internally.

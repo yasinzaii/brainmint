@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional
-
-from omegaconf import DictConfig, OmegaConf
+from typing import Any
 
 import torch
+from omegaconf import DictConfig, OmegaConf
 from torch import nn
 
 from brainmint.inference.core.context import InferenceContext
@@ -23,7 +23,7 @@ class WDM3DConfig:
 
     # Sampling
     clip_denoised: bool = True
-    seed: Optional[int] = None
+    seed: int | None = None
 
     # Shape & wavelet parameters
     image_size: int = 128          # output size after IDWT (e.g., 128)
@@ -33,15 +33,15 @@ class WDM3DConfig:
     lll_scale: float = 3.0         # as in their scripts/generation_sample.py
 
     # Checkpoint loading
-    state_key: Optional[str] = "<root>"
-    loader: Optional[str] = None
+    state_key: str | None = "<root>"
+    loader: str | None = None
     strict: bool | str = True
     freeze: bool = True
     set_eval: bool = True
 
     # Optional overrides for create_model_and_diffusion kwargs
     # (use with care; must match checkpoint architecture)
-    model_kwargs: Optional[dict[str, Any]] = None
+    model_kwargs: dict[str, Any] | None = None
 
 
 class WDM3DWrapper(nn.Module):
@@ -69,9 +69,9 @@ class WDM3DWrapper(nn.Module):
         self.cfg: WDM3DConfig = cfg
 
         # Will be populated in load_weights()
-        self.model: Optional[nn.Module] = None
+        self.model: nn.Module | None = None
         self.diffusion: Any = None
-        self.idwt: Optional[nn.Module] = None
+        self.idwt: nn.Module | None = None
 
         self._weights_loaded: bool = False
 
@@ -101,9 +101,9 @@ class WDM3DWrapper(nn.Module):
         batch: Mapping[str, Any],
         *,
         batch_size: int,
-        ctx: Optional[InferenceContext] = None,
-        device: Optional[torch.device] = None,
-        dtype: Optional[torch.dtype] = None,
+        ctx: InferenceContext | None = None,
+        device: torch.device | None = None,
+        dtype: torch.dtype | None = None,
     ) -> torch.Tensor:
         """Return samples as (B,1,Z,Y,X) in [-1,1]."""
         if not self._weights_loaded:

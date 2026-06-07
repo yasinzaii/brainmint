@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 import sys
 from pathlib import Path
 
@@ -5,16 +6,17 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 CONFIG_DIR = PROJECT_ROOT / "configs"
 
-import torch
-import torch.nn as nn
 import pytest
 import pytorch_lightning as pl
+import torch
+import torch.nn as nn
 from hydra import compose, initialize_config_dir
 from hydra.utils import instantiate
-from omegaconf import open_dict, OmegaConf
 from monai.data import DataLoader
-from monai.networks.schedulers.ddpm import DDPMPredictionType
 from monai.networks.schedulers import RFlowScheduler
+from monai.networks.schedulers.ddpm import DDPMPredictionType
+from omegaconf import OmegaConf, open_dict
+
 from brainmint.lightning.diffusion_module import DiffusionModule
 
 
@@ -388,7 +390,7 @@ def test_diffusion_fast_loop(tmp_path, input_specs):
         print(OmegaConf.to_yaml(cfg, resolve=True))
 
         callbacks = [instantiate(c) for c in cfg.callbacks.diff_callbacks]
-        loggers   = [instantiate(l) for l in cfg.loggers]
+        loggers   = [instantiate(logger_cfg) for logger_cfg in cfg.loggers]
 
         trainer = pl.Trainer(
             **cfg.trainer.pl_trainer,

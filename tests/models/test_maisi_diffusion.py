@@ -1,15 +1,13 @@
-import sys
 import json
-import pytest
+import sys
 from pathlib import Path
 
-import torch
-import numpy as np
 import nibabel as nib
-
+import numpy as np
+import pytest
+import torch
 from hydra import compose, initialize_config_dir
 from hydra.utils import instantiate
-from omegaconf import open_dict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))

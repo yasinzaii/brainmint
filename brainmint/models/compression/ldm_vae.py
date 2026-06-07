@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """BrainMint-facing LDM-VAE compression wrapper."""
+
+from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import torch
 from omegaconf import OmegaConf
@@ -20,12 +20,12 @@ class LDMVAE(nn.Module):
         self,
         *,
         ckpt_path: str | Path,
-        state_key: Optional[str] = "autoencoder",
-        loader: Optional[str] = None,
+        state_key: str | None = "autoencoder",
+        loader: str | None = None,
         strict: bool | str = True,
         freeze: bool = True,
         set_eval: bool = True,
-        autoencoder_kwargs: Optional[Mapping[str, Any]] = None,
+        autoencoder_kwargs: Mapping[str, Any] | None = None,
     ) -> None:
         super().__init__()
 

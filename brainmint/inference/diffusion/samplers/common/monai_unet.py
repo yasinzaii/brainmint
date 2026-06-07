@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import inspect
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional, Tuple
+from typing import Any
 
 import torch
 
 from brainmint.inference.core.context import InferenceContext
 from brainmint.inference.core.interfaces import LatentInput
-from brainmint.inference.diffusion.samplers.base import TimestepSamplerBase
 from brainmint.inference.core.scheduler import set_timesteps_safe
+from brainmint.inference.diffusion.samplers.base import TimestepSamplerBase
 
 
 @dataclass(frozen=True)
@@ -101,7 +102,7 @@ class MonaiUNetTimestepSampler(TimestepSamplerBase):
         # Optional ControlNet conditioning (matches MONAI sample.py pattern)
         controlnet_cond_key: str = "controlnet_cond",
         # If set, forces whether scheduler.step uses next_t. If None, auto-detect.
-        use_next_t: Optional[bool] = None,
+        use_next_t: bool | None = None,
         # Autocast enabled (matches MAISI: torch.amp.autocast("cuda", enabled=True))
         autocast: bool = True,
     ) -> None:
@@ -186,9 +187,7 @@ class MonaiUNetTimestepSampler(TimestepSamplerBase):
         init = latent.init
         if init is not None:
             x = init.to(device=ctx.device, dtype=self.init_noise_dtype)
-            b = int(init.shape[0])
         elif ref is not None:
-            b = int(ref.shape[0])
             x = torch.randn_like(ref, device=ctx.device, dtype=self.init_noise_dtype)
         else:
             raise ValueError("LatentInput must provide either init or ref.")
@@ -205,7 +204,7 @@ class MonaiUNetTimestepSampler(TimestepSamplerBase):
             # Match tutorial: next timesteps = timesteps[1:] + [0]
             all_t = timesteps.to(ctx.device)
             next_t = torch.cat((all_t[1:], torch.tensor([0], dtype=all_t.dtype, device=all_t.device)))
-            iterator = zip(all_t, next_t)
+            iterator = zip(all_t, next_t, strict=True)
         else:
             iterator = [(t, None) for t in timesteps.to(ctx.device)]
 

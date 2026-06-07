@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping, Optional
+from typing import Any
 
 import numpy as np
 
@@ -15,7 +16,7 @@ class NpyReader(ReaderBase):
 
     allow_pickle: bool = False
 
-    def read(self, path: PathLike, *, meta: Optional[Mapping[str, Any]] = None) -> np.ndarray:  # noqa: ARG002
+    def read(self, path: PathLike, *, meta: Mapping[str, Any] | None = None) -> np.ndarray:  # noqa: ARG002
         p = Path(path)
         return np.load(str(p), allow_pickle=self.allow_pickle)
 
@@ -26,7 +27,7 @@ class NiftiReader(ReaderBase):
 
     dtype: Any = np.float32
 
-    def read(self, path: PathLike, *, meta: Optional[Mapping[str, Any]] = None) -> np.ndarray:
+    def read(self, path: PathLike, *, meta: Mapping[str, Any] | None = None) -> np.ndarray:
         p = Path(path)
         try:
             import nibabel as nib  # type: ignore
@@ -48,7 +49,7 @@ class AutoReader(ReaderBase):
     nifti_reader: NiftiReader = field(default_factory=NiftiReader)
     npy_reader: NpyReader = field(default_factory=NpyReader)
 
-    def read(self, path: PathLike, *, meta: Optional[Mapping[str, Any]] = None) -> np.ndarray:
+    def read(self, path: PathLike, *, meta: Mapping[str, Any] | None = None) -> np.ndarray:
         p = Path(path)
         s = str(p).lower()
         if s.endswith(".nii") or s.endswith(".nii.gz"):

@@ -6,11 +6,8 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Optional, List
 
 import torch
-from torch import nn
-
 from monai.networks.blocks import Convolution
 from monai.networks.nets.diffusion_model_unet import (
     get_down_block,
@@ -21,6 +18,7 @@ from monai.networks.nets.diffusion_model_unet import (
 )
 from monai.utils import ensure_tuple_rep
 from monai.utils.type_conversion import convert_to_tensor
+from torch import nn
 
 
 class DiffusionUNet(nn.Module):
@@ -60,7 +58,7 @@ class DiffusionUNet(nn.Module):
         use_flash_attention: bool = False,
         dropout_cattn: float = 0.0,
         with_demographics: bool = False,
-        dem_embed_dim: Optional[int] = None,
+        dem_embed_dim: int | None = None,
     ) -> None:
         super().__init__()
 
@@ -324,13 +322,13 @@ class DiffusionUNet(nn.Module):
         emb: torch.Tensor,
         context: torch.Tensor | None,
         down_block_additional_residuals: tuple[torch.Tensor, ...] | None,
-    ) -> tuple[torch.Tensor, List[torch.Tensor]]:
+    ) -> tuple[torch.Tensor, list[torch.Tensor]]:
         if context is not None and not self.with_conditioning:
             raise ValueError(
                 "Model must be created with with_conditioning=True if `context` is provided."
             )
 
-        down_block_res_samples: List[torch.Tensor] = [h]
+        down_block_res_samples: list[torch.Tensor] = [h]
         for downsample_block in self.down_blocks:
             h, res_samples = downsample_block(hidden_states=h, temb=emb, context=context)
             down_block_res_samples.extend(res_samples)
@@ -342,8 +340,8 @@ class DiffusionUNet(nn.Module):
                     "Mismatch between down_block_additional_residuals and down_block_res_samples "
                     f"({len(down_block_additional_residuals)} vs {len(down_block_res_samples)})."
                 )
-            new_res_samples: List[torch.Tensor] = []
-            for base, add in zip(down_block_res_samples, down_block_additional_residuals):
+            new_res_samples: list[torch.Tensor] = []
+            for base, add in zip(down_block_res_samples, down_block_additional_residuals, strict=True):
                 new_res_samples.append(base + add)
             down_block_res_samples = new_res_samples
 
@@ -354,7 +352,7 @@ class DiffusionUNet(nn.Module):
         h: torch.Tensor,
         emb: torch.Tensor,
         context: torch.Tensor | None,
-        down_block_res_samples: List[torch.Tensor],
+        down_block_res_samples: list[torch.Tensor],
     ) -> torch.Tensor:
         for upsample_block in self.up_blocks:
             idx: int = -len(upsample_block.resnets)  # type: ignore

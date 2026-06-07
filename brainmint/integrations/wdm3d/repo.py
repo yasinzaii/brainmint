@@ -1,15 +1,15 @@
-from __future__ import annotations
-
 """WDM-3D external repository helpers."""
 
+from __future__ import annotations
+
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator, Optional, Union
 
 from brainmint.external.registry import get_repo_spec
 from brainmint.external.repo_manager import import_external_repo
 
-PathLike = Union[str, Path]
+PathLike = str | Path
 
 WDM3D_REPO_NAME = "wdm_3d"
 
@@ -17,7 +17,7 @@ WDM3D_REPO_NAME = "wdm_3d"
 @contextmanager
 def wdm3d_repo_context(
     *,
-    external_repo_root: Optional[PathLike] = None,
+    external_repo_root: PathLike | None = None,
     allow_network: bool = True,
 ) -> Iterator[Path]:
     """Temporarily expose the canonical WDM-3D repo on ``sys.path``."""

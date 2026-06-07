@@ -1,8 +1,8 @@
-import os
-import logging
 import inspect
-
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Union
+import logging
+import os
+from collections.abc import Iterable, Mapping
+from typing import Any
 
 import torch
 from torch import nn
@@ -28,9 +28,9 @@ def get_attr(obj: Any, dot_path: str) -> Any:
     return cur
 
 
-def _flatten_map(m: Mapping[str, Any], prefix: str = "") -> Dict[str, torch.Tensor]:
+def _flatten_map(m: Mapping[str, Any], prefix: str = "") -> dict[str, torch.Tensor]:
     """Flatten nested mappings into {'a.b.c': Tensor, ...}. Ignore non-tensor leaves."""
-    out: Dict[str, torch.Tensor] = {}
+    out: dict[str, torch.Tensor] = {}
     for k, v in m.items():
         if not isinstance(k, str):
             continue
@@ -42,21 +42,21 @@ def _flatten_map(m: Mapping[str, Any], prefix: str = "") -> Dict[str, torch.Tens
                 out[key] = v
     return out
 
-def _slice_by_prefix(sd: Mapping[str, Any], prefix: str) -> Dict[str, torch.Tensor]:
+def _slice_by_prefix(sd: Mapping[str, Any], prefix: str) -> dict[str, torch.Tensor]:
     """Slice a (possibly nested) mapping by dotted prefix; strip that prefix."""
     flat = _flatten_map(sd)
     if not prefix:
         return dict(flat)
     pref = prefix if prefix.endswith(".") else prefix + "."
     plen = len(pref)
-    out: Dict[str, torch.Tensor] = {}
+    out: dict[str, torch.Tensor] = {}
     for k, v in flat.items():
         if k.startswith(pref):
             out[k[plen:]] = v
     return out
 
 
-def _find_state_dict(container: Mapping[str, Any], locator: Optional[str]) -> Mapping[str, torch.Tensor]:
+def _find_state_dict(container: Mapping[str, Any], locator: str | None) -> Mapping[str, torch.Tensor]:
     """
     Return a UNIQUE slice of weights using a single locator string.
 
@@ -73,7 +73,7 @@ def _find_state_dict(container: Mapping[str, Any], locator: Optional[str]) -> Ma
     if locator is None or not isinstance(locator, str):
         raise ValueError("Locator must be a non-empty string (use target or state_key).")
 
-    bases: List[tuple[Optional[str], Mapping[str, Any]]] = []
+    bases: list[tuple[str | None, Mapping[str, Any]]] = []
     for cont_name in ("state_dict", "model"):
         b = container.get(cont_name)
         if isinstance(b, Mapping):
@@ -85,7 +85,7 @@ def _find_state_dict(container: Mapping[str, Any], locator: Optional[str]) -> Ma
         locator = ""
 
     # Build candidate slices
-    candidates: List[Dict[str, torch.Tensor]] = []
+    candidates: list[dict[str, torch.Tensor]] = []
     for tag, base in bases:
         if tag is not None and locator == tag:
             cand = _flatten_map(base)
@@ -97,7 +97,7 @@ def _find_state_dict(container: Mapping[str, Any], locator: Optional[str]) -> Ma
             candidates.append(cand)
 
     # Deduplicate by key signature (avoid double-counting identical slices)
-    uniq: Dict[tuple, Dict[str, torch.Tensor]] = {}
+    uniq: dict[tuple, dict[str, torch.Tensor]] = {}
     for c in candidates:
         sig = tuple(sorted(c.keys()))
         if sig:
@@ -116,9 +116,9 @@ def load_module_state_dict(
     module: nn.Module,
     *,
     path: str,
-    state_key: Optional[str],
-    strict: Union[bool, str] = "auto",
-    loader: Optional[str] = None,
+    state_key: str | None,
+    strict: bool | str = "auto",
+    loader: str | None = None,
     freeze: bool = True,
     set_eval: bool = True,
     optional: bool = False,
@@ -135,7 +135,7 @@ def load_module_state_dict(
     if isinstance(strict, str):
         strict_lower = strict.lower()
         if strict_lower == "auto":
-            strict_mode: Union[bool, str] = "auto"
+            strict_mode: bool | str = "auto"
         elif strict_lower in {"true", "1", "yes"}:
             strict_mode = True
         elif strict_lower in {"false", "0", "no"}:
@@ -220,7 +220,7 @@ def load_module_state_dict(
     return True
 
 
-def _load_weight_spec(owner: Any, spec: Mapping[str, Any]) -> Optional[str]:
+def _load_weight_spec(owner: Any, spec: Mapping[str, Any]) -> str | None:
     """Load one normalized weight spec; used by load_weight_specs()."""
 
     spec = dict(spec)
@@ -246,7 +246,7 @@ def _load_weight_spec(owner: Any, spec: Mapping[str, Any]) -> Optional[str]:
     return target if loaded else None
 
 
-def load_weight_specs(owner: Any, specs: Iterable[Mapping[str, Any]]) -> List[str]:
+def load_weight_specs(owner: Any, specs: Iterable[Mapping[str, Any]]) -> list[str]:
     """Load Hydra-style weight specs into modules owned by ``owner``.
 
     ``owner`` should be the wrapper/container object that owns the modules named
@@ -279,7 +279,7 @@ def load_weight_specs(owner: Any, specs: Iterable[Mapping[str, Any]]) -> List[st
     Duplicate targets are preserved.
     """
 
-    loaded_targets: List[str] = []
+    loaded_targets: list[str] = []
     for index, spec in enumerate(specs):
         spec = dict(spec)
         try:
@@ -291,7 +291,7 @@ def load_weight_specs(owner: Any, specs: Iterable[Mapping[str, Any]]) -> List[st
     return loaded_targets
 
 
-def _shape_filter(sd: Mapping[str, torch.Tensor], module: nn.Module) -> Dict[str, torch.Tensor]:
+def _shape_filter(sd: Mapping[str, torch.Tensor], module: nn.Module) -> dict[str, torch.Tensor]:
     """Drop keys whose tensor shape doesn't match the target module."""
     tgt = module.state_dict()
     return {k: v for k, v in sd.items() if (k in tgt and tuple(tgt[k].shape) == tuple(v.shape))}
@@ -340,15 +340,15 @@ class StateDictLoaderMixin:
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._loaded_once = False
-        self._loaded_targets: Set[str] = set()
+        self._loaded_targets: set[str] = set()
 
-    def _specs(self) -> List[Dict[str, Any]]:
+    def _specs(self) -> list[dict[str, Any]]:
         hp = getattr(self, "hparams", {}) or {}
         specs = hp.get("weight_loads", []) or []
         return [dict(s) for s in specs]
 
     # Lightning hook: runs at start of fit/validate/test/predict
-    def setup(self, stage: Optional[str] = None) -> None:
+    def setup(self, stage: str | None = None) -> None:
         if hasattr(super(), "setup"):
             super().setup(stage)  # Lightning setup()
 
@@ -366,6 +366,6 @@ class StateDictLoaderMixin:
         self._loaded_targets.update(load_weight_specs(self, self._specs()))
         self._loaded_once = True
 
-    def get_loaded_models(self) -> List[str]:
+    def get_loaded_models(self) -> list[str]:
         """Return a list of top-level targets whose weights were loaded."""
         return sorted(self._loaded_targets)

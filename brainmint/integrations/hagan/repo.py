@@ -1,15 +1,15 @@
-from __future__ import annotations
-
 """HA-GAN external repository helpers."""
 
+from __future__ import annotations
+
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator, Optional, Union
 
 from brainmint.external.registry import get_repo_spec
 from brainmint.external.repo_manager import import_external_repo
 
-PathLike = Union[str, Path]
+PathLike = str | Path
 
 HAGAN_REPO_NAME = "ha_gan"
 
@@ -17,7 +17,7 @@ HAGAN_REPO_NAME = "ha_gan"
 @contextmanager
 def hagan_repo_context(
     *,
-    external_repo_root: Optional[PathLike] = None,
+    external_repo_root: PathLike | None = None,
     allow_network: bool = True,
 ) -> Iterator[Path]:
     """Temporarily expose the canonical HA-GAN repo on ``sys.path``."""

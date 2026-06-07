@@ -1,4 +1,5 @@
-from typing import Any, Dict, Mapping, Sequence, Tuple
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import torch
 
@@ -23,9 +24,9 @@ class UkbLdmFixed4VecConditioning(ConditioningBuilderBase):
 
     def build(
         self, batch: Mapping[str, Any], *, latent_ref: torch.Tensor, ctx: InferenceContext
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         b = int(latent_ref.shape[0])
-        spatial: Tuple[int, int, int] = tuple(int(s) for s in latent_ref.shape[-3:])
+        spatial: tuple[int, int, int] = tuple(int(s) for s in latent_ref.shape[-3:])
 
         vec = self._values.to(device=ctx.device, dtype=ctx.dtype).view(1, 4).expand(b, 4)
         vec = as_2d(vec, name="ukb_fixed_4vec")

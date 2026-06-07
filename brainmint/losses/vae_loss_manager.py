@@ -1,8 +1,8 @@
-import torch
 import logging
 from pathlib import Path
+
+import torch
 from tabulate import tabulate
-from typing import Dict, List
 
 from .utils import KL_loss
 
@@ -42,8 +42,8 @@ class VaeLossManager:
         self.perc_w = perceptual_weight
         
         # Epocs Loss record
-        self.train_loss_rec: List[Dict[str, float]] = []
-        self.val_loss_rec: List[Dict[str, float]] = []   
+        self.train_loss_rec: list[dict[str, float]] = []
+        self.val_loss_rec: list[dict[str, float]] = []   
 
         self.logger = logger or logging.getLogger(__name__)
         self.logger.info( "LossManager: perc_w=%.4g kl_w=%.4g adv_w=%.4g", perceptual_weight, kl_weight, adv_weight)
@@ -53,7 +53,7 @@ class VaeLossManager:
 
         self.running_loss = { "train": {k: torch.zeros(1, device=self.device) for k in self._STAT_KEYS},
                                 "val": {k: torch.zeros(1, device=self.device) for k in self._RECON_KEYS},}
-        self.last_loss: Dict[str, Dict[str, torch.Tensor]]  = {}
+        self.last_loss: dict[str, dict[str, torch.Tensor]]  = {}
 
         self._train_gen_calls = 0
         self._train_disc_calls = 0
@@ -94,7 +94,7 @@ class VaeLossManager:
     def weighted_sum_skip_kl(self, losses: dict) -> float:
         return losses["recons"] + self.perc_w * losses["perc"]
 
-    def epoch_averages(self,  mode: str | None = None) -> Dict[str, float]:
+    def epoch_averages(self,  mode: str | None = None) -> dict[str, float]:
         """Return CPU floats — safe for JSON/TensorBoard."""
         mode = mode or self.mode
         return {
@@ -128,7 +128,7 @@ class VaeLossManager:
 
     # Accumulated Per Image Baises - As Multiplied by Batch Size. 
     @torch.no_grad()
-    def _accumulate(self, comp: Dict[str, torch.Tensor], bs: int) -> None:
+    def _accumulate(self, comp: dict[str, torch.Tensor], bs: int) -> None:
         buf = self.running_loss[self.mode]
         for k, v in comp.items():
             if k in buf:
@@ -140,7 +140,7 @@ class VaeLossManager:
             recon: torch.Tensor,
             z_mu: torch.Tensor,
             z_sigma: torch.Tensor
-        )-> Dict[str, torch.Tensor]:
+        )-> dict[str, torch.Tensor]:
         l_re  = self.recon_loss_fn(recon, images)
         l_kl  = KL_loss(z_mu, z_sigma) if (z_mu is not None and z_sigma is not None) else torch.tensor(0.0, device=self.device)
         l_pc  = self.perc_loss_fn(recon.float(), images.float()) if self.perc_loss_fn is not None else  torch.tensor(0.0, device=self.device)
