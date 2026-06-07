@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import torch
 
@@ -17,7 +18,7 @@ class FixedShapeLatent(LatentProviderBase):
         *,
         latent_channels: int,
         spatial: Sequence[int],
-        batch_key: Optional[str] = "image",
+        batch_key: str | None = "image",
     ) -> None:
         super().__init__()
 

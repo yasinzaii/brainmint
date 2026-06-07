@@ -1,9 +1,10 @@
-from __future__ import annotations
-
 """BrainMint-facing BrainSynth VQ-VAE compression wrapper."""
 
+from __future__ import annotations
+
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping, Optional
+from typing import Any
 
 import torch
 from omegaconf import OmegaConf
@@ -20,11 +21,11 @@ class BrainSynthVQVAE(nn.Module):
         self,
         *,
         ckpt_path: str | Path,
-        state_key: Optional[str] = "network",
+        state_key: str | None = "network",
         strict: bool | str = True,
         freeze: bool = True,
         set_eval: bool = True,
-        model_kwargs: Optional[Mapping[str, Any]] = None,
+        model_kwargs: Mapping[str, Any] | None = None,
     ) -> None:
         super().__init__()
 

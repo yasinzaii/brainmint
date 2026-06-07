@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """ALDM VQ-GAN builders.
 
 This module is intentionally ALDM-specific. It owns upstream imports from
@@ -7,9 +5,11 @@ This module is intentionally ALDM-specific. It owns upstream imports from
 compression/translation wrappers stay in ``brainmint.models``.
 """
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import torch
 from omegaconf import OmegaConf
@@ -26,8 +26,8 @@ _LOG = logging.getLogger(__name__)
 
 def build_stage1_vqgan(
     *,
-    checkpoint_path: Union[str, Path],
-    config_path: Optional[Union[str, Path]] = None,
+    checkpoint_path: str | Path,
+    config_path: str | Path | None = None,
 ) -> nn.Module:
     """Build ALDM's stage-1 VQ-GAN compression model for inference.
 
@@ -62,8 +62,8 @@ def build_stage1_vqgan(
 
 def build_stage2_spade_vqgan(
     *,
-    checkpoint_path: Union[str, Path],
-    config_path: Optional[Union[str, Path]] = None,
+    checkpoint_path: str | Path,
+    config_path: str | Path | None = None,
 ) -> nn.Module:
     """Build ALDM's stage-2 VQ-GAN/SPADE translator for inference.
 

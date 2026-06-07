@@ -1,9 +1,9 @@
-from __future__ import annotations
-
 """BrainMint-facing MAISI VAE-GAN compression wrapper."""
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import torch
 from torch import nn
@@ -19,8 +19,8 @@ class MAISIVAEGAN(nn.Module):
         *,
         autoencoder: nn.Module,
         ckpt_path: str | Path,
-        state_key: Optional[str] = "autoencoder",
-        loader: Optional[str] = None,
+        state_key: str | None = "autoencoder",
+        loader: str | None = None,
         strict: bool | str = True,
         freeze: bool = True,
         set_eval: bool = True,

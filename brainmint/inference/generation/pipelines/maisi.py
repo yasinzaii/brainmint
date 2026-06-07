@@ -1,33 +1,34 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Optional, Sequence, Set, ClassVar
+from collections.abc import Mapping, Sequence
+from typing import Any, ClassVar
 
 import torch
 
-from brainmint.utils.batch import infer_batch_size
 from brainmint.inference.core.context import InferenceContext
 from brainmint.inference.core.interfaces import DiffusionPipeline, Postprocessor
+from brainmint.utils.batch import infer_batch_size
 from brainmint.utils.spatial import center_crop_or_pad_zyx
 
 
 class MAISI3DGenerationPipeline(DiffusionPipeline):
     """Generation pipeline for MAISI 3D diffusion."""
 
-    required_modules: ClassVar[Set[str]] = {"maisi"}
+    required_modules: ClassVar[set[str]] = {"maisi"}
 
     def __init__(
         self,
         *,
-        output_size_zyx: Optional[Sequence[int]] = None,
+        output_size_zyx: Sequence[int] | None = None,
         normalize_to_01: bool = True,
-        postprocess: Optional[Postprocessor] = None,
+        postprocess: Postprocessor | None = None,
     ) -> None:
         super().__init__()
         self.output_size_zyx = list(output_size_zyx) if output_size_zyx is not None else None
         self.normalize_to_01 = bool(normalize_to_01)
         self.postprocess = postprocess
 
-    def run(self, batch: Mapping[str, Any], *, ctx: InferenceContext) -> Dict[str, Any]:
+    def run(self, batch: Mapping[str, Any], *, ctx: InferenceContext) -> dict[str, Any]:
         model = ctx.get("maisi", required=True)
         if not hasattr(model, "sample"):
             raise TypeError("Context module 'maisi' must expose a .sample(...) method.")

@@ -36,7 +36,6 @@ caching if memory becomes a constraint.
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -101,11 +100,11 @@ class SyntheticMaskTransform(Randomizable, MapTransform):
     def __init__(
         self,
         image_key: str,
-        mask_key: Optional[str],
+        mask_key: str | None,
         mask_loader_tf,  # Transform Compose
-        dataset_json: Union[str, Path],
-        dataset_root: Union[str, Path],
-        dilation_mm_range: Tuple[int, int] = (5, 10),
+        dataset_json: str | Path,
+        dataset_root: str | Path,
+        dilation_mm_range: tuple[int, int] = (5, 10),
         prob_flip: float = 0.5,
         prob_rotate: float = 0.5,
         prob_affine: float = 0.7,
@@ -113,7 +112,7 @@ class SyntheticMaskTransform(Randomizable, MapTransform):
         max_scale: float = 0.15,
         max_shear: float = 0.15,
         max_translate: float = 5.0,
-        seed: Optional[int] = 42,
+        seed: int | None = 42,
         cache_masks: bool = True,
         allow_missing_keys: bool = False,
     ) -> None:
@@ -124,7 +123,7 @@ class SyntheticMaskTransform(Randomizable, MapTransform):
         self.mask_loader_tf = mask_loader_tf
         self.dataset_json = Path(dataset_json)
         self.dataset_root = Path(dataset_root)
-        self.mask_pool: List[str] = self._gather_mask_pool()
+        self.mask_pool: list[str] = self._gather_mask_pool()
         if not self.mask_pool:
             raise ValueError("No BraTS segmentation masks found in dataset JSON")
         self.dilation_mm_range = (max(0, int(dilation_mm_range[0])), max(0, int(dilation_mm_range[1])))
@@ -137,7 +136,7 @@ class SyntheticMaskTransform(Randomizable, MapTransform):
         self.max_translate = float(max_translate)
         self.rng = np.random.default_rng(seed)
         self.cache_masks = bool(cache_masks)
-        self._mask_cache: Dict[str, np.ndarray] = {}
+        self._mask_cache: dict[str, np.ndarray] = {}
 
     def set_random_state(self, seed=None, state=None):
         super().set_random_state(seed, state)
@@ -170,11 +169,11 @@ class SyntheticMaskTransform(Randomizable, MapTransform):
             return arr.copy()
         return arr
 
-    def _gather_mask_pool(self) -> List[str]:
+    def _gather_mask_pool(self) -> list[str]:
         """Collect BRATS segmentation mask paths from the dataset JSON."""
         with self.dataset_json.open("r") as f:
             meta = json.load(f)
-        masks: List[str] = []
+        masks: list[str] = []
         train = meta.get("train")
         records = [rec for rec in train if rec.get("dataset") == "BRATS"]
         for rec in records:
@@ -191,7 +190,7 @@ class SyntheticMaskTransform(Randomizable, MapTransform):
         mask_path = self.mask_pool[int(idx)]
         return self._load_mask(mask_path)
 
-    def _random_transform(self, mask: np.ndarray, target_shape: Tuple[int, int, int]) -> np.ndarray:
+    def _random_transform(self, mask: np.ndarray, target_shape: tuple[int, int, int]) -> np.ndarray:
         """Apply random spatial augmentations and resize to ``target_shape``.
 
         Augmentations include axis flips, small-angle rotations and optional
@@ -260,7 +259,7 @@ class SyntheticMaskTransform(Randomizable, MapTransform):
         ball = (xx * xx + yy * yy + zz * zz) <= r * r
         return ndi.binary_dilation(full_mask.astype(bool), structure=ball)
 
-    def __call__(self, data: Dict[str, Union[str, torch.Tensor]]) -> Dict[str, Union[torch.Tensor, np.ndarray]]:
+    def __call__(self, data: dict[str, str | torch.Tensor]) -> dict[str, torch.Tensor | np.ndarray]:
         d = dict(data)
         # Load the image tensor (expects shape (C_img, D, H, W))
         img = d[self.image_key]
@@ -346,17 +345,17 @@ class CachedMaskPoolOneHotTransform(Randomizable, MapTransform):
         *,
         image_key: str,
         out_key: str = "med_ddpm_mask_one_hot",
-        mask_key: Optional[str] = "seg",
+        mask_key: str | None = "seg",
         mask_loader_tf,
-        dataset_json: Union[str, Path],
-        dataset_root: Union[str, Path],
+        dataset_json: str | Path,
+        dataset_root: str | Path,
         # where to gather seg masks from in the BrainScape JSON
         split: str = "train",
         group_key: str = "preprocessed",
-        dataset_name_contains: Optional[str] = None,
-        seed: Optional[int] = 42,
+        dataset_name_contains: str | None = None,
+        seed: int | None = 42,
         cache_masks: bool = True,
-        max_masks: Optional[int] = None,
+        max_masks: int | None = None,
         allow_missing_keys: bool = False,
         output_dtype: torch.dtype = torch.float32,
     ) -> None:
@@ -381,7 +380,7 @@ class CachedMaskPoolOneHotTransform(Randomizable, MapTransform):
         self.set_random_state(seed=seed)
         self._base_seed = seed
 
-        self._mask_paths: List[Path] = self._gather_mask_paths(
+        self._mask_paths: list[Path] = self._gather_mask_paths(
             dataset_json=self.dataset_json,
             dataset_root=self.dataset_root,
             split=self.split,
@@ -396,7 +395,7 @@ class CachedMaskPoolOneHotTransform(Randomizable, MapTransform):
                 f"(group_key='{self.group_key}', dataset_name_contains={self.dataset_name_contains!r})."
             )
 
-        self._cache: Dict[str, np.ndarray] = {}
+        self._cache: dict[str, np.ndarray] = {}
         if self.cache_masks:
             for p in self._mask_paths:
                 _ = self._load_mask_np(p)
@@ -408,8 +407,8 @@ class CachedMaskPoolOneHotTransform(Randomizable, MapTransform):
         *,
         split: str = "train",
         group_key: str = "preprocessed",
-        dataset_name_contains: Optional[str] = None,
-    ) -> List[Path]:
+        dataset_name_contains: str | None = None,
+    ) -> list[Path]:
         """Collect segmentation mask paths from BrainScape JSON.
 
         Args:
@@ -423,7 +422,7 @@ class CachedMaskPoolOneHotTransform(Randomizable, MapTransform):
         source = json.loads(dataset_json.read_text())
         if split not in source:
             raise KeyError(f"Split '{split}' missing from dataset_json: {dataset_json}")
-        out: List[Path] = []
+        out: list[Path] = []
         needle = dataset_name_contains.lower() if isinstance(dataset_name_contains, str) and dataset_name_contains else None
 
         for rec in source[split]:
@@ -499,7 +498,7 @@ class CachedMaskPoolOneHotTransform(Randomizable, MapTransform):
             return img.abs() > 0
         raise ValueError(f"Unexpected image dim {img.dim()} for brain mask")
 
-    def _get_seg_from_sample(self, sample: Dict) -> Optional[np.ndarray]:
+    def _get_seg_from_sample(self, sample: dict) -> np.ndarray | None:
         if not self.mask_key:
             return None
         if self.mask_key not in sample:
@@ -520,7 +519,7 @@ class CachedMaskPoolOneHotTransform(Randomizable, MapTransform):
         return seg_np.astype(np.uint8, copy=False)
 
     @staticmethod
-    def _center_crop_np(seg_np: np.ndarray, target_shape: Tuple[int, int, int]) -> np.ndarray:
+    def _center_crop_np(seg_np: np.ndarray, target_shape: tuple[int, int, int]) -> np.ndarray:
         """Center-crop seg_np (D,H,W) to target_shape."""
         d, h, w = seg_np.shape
         td, th, tw = target_shape
@@ -529,7 +528,7 @@ class CachedMaskPoolOneHotTransform(Randomizable, MapTransform):
         sw = (w - tw) // 2
         return seg_np[sd:sd + td, sh:sh + th, sw:sw + tw]
 
-    def __call__(self, data: Dict) -> Dict:
+    def __call__(self, data: dict) -> dict:
         d = dict(data)
 
         if self.image_key not in d:
@@ -540,7 +539,7 @@ class CachedMaskPoolOneHotTransform(Randomizable, MapTransform):
             img = torch.as_tensor(img)
 
         seg_np = self._get_seg_from_sample(d)
-        seg_path: Optional[Path] = None
+        seg_path: Path | None = None
         if seg_np is None:
             # Pick random BraTS seg label map from the cached pool.
             path = self._mask_paths[int(self.R.randint(0, len(self._mask_paths)))]
@@ -559,7 +558,7 @@ class CachedMaskPoolOneHotTransform(Randomizable, MapTransform):
                     seg_shape,
                     meta_strings,
                 )
-            img_smaller_than_segmask = all(img_s < seg_s for img_s, seg_s in zip(image_shape, seg_shape))
+            img_smaller_than_segmask = all(img_s < seg_s for img_s, seg_s in zip(image_shape, seg_shape, strict=True))
             if img_smaller_than_segmask:
                 seg_np = self._center_crop_np(seg_np, image_shape)
             else:

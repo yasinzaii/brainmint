@@ -14,13 +14,13 @@ for example:
     ExponentialMovingAverage({"unet": unet, "demographics_encoder": enc}, cfg)
 """
 
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
-from typing import Dict, Iterator, Mapping, Optional, Tuple, Union
 
 import torch
 from torch import nn
 
-ModuleOrDict = Union[nn.Module, Mapping[str, nn.Module]]
+ModuleOrDict = nn.Module | Mapping[str, nn.Module]
 
 
 @dataclass
@@ -48,28 +48,28 @@ class ExponentialMovingAverage:
         self.num_updates: int = 0
 
         # Tracked modules (name -> module)
-        self._modules: Dict[str, nn.Module] = self._normalize_modules(module_or_modules)
+        self._modules: dict[str, nn.Module] = self._normalize_modules(module_or_modules)
         if not self._modules:
             raise ValueError("EMA initialized with no modules")
 
         # Fast reverse lookup for legacy single-module calls
-        self._module_id_to_name: Dict[int, str] = {id(m): name for name, m in self._modules.items()}
+        self._module_id_to_name: dict[int, str] = {id(m): name for name, m in self._modules.items()}
 
         # Shadow (EMA) state
-        self._shadow_params: Dict[str, Dict[str, torch.Tensor]] = {}
-        self._shadow_buffers: Dict[str, Dict[str, torch.Tensor]] = {}
+        self._shadow_params: dict[str, dict[str, torch.Tensor]] = {}
+        self._shadow_buffers: dict[str, dict[str, torch.Tensor]] = {}
 
         # Stored live state for swap/restore
-        self._stored_params: Dict[str, Dict[str, torch.Tensor]] = {}
-        self._stored_buffers: Dict[str, Dict[str, torch.Tensor]] = {}
+        self._stored_params: dict[str, dict[str, torch.Tensor]] = {}
+        self._stored_buffers: dict[str, dict[str, torch.Tensor]] = {}
 
         self._init_from(self._modules)
 
-    def _normalize_modules(self, module_or_modules: ModuleOrDict) -> Dict[str, nn.Module]:
+    def _normalize_modules(self, module_or_modules: ModuleOrDict) -> dict[str, nn.Module]:
         if isinstance(module_or_modules, nn.Module):
             return {"model": module_or_modules}
         if isinstance(module_or_modules, Mapping):
-            out: Dict[str, nn.Module] = {}
+            out: dict[str, nn.Module] = {}
             for k, v in module_or_modules.items():
                 if v is None:
                     continue
@@ -81,7 +81,7 @@ class ExponentialMovingAverage:
             return out
         raise TypeError(f"Expected nn.Module or Mapping[str, nn.Module], got {type(module_or_modules)}")
 
-    def _select_modules(self, module_or_modules: Optional[ModuleOrDict] = None) -> Dict[str, nn.Module]:
+    def _select_modules(self, module_or_modules: ModuleOrDict | None = None) -> dict[str, nn.Module]:
         """Resolve optional user input to a {name: module} mapping.
 
         Backward compatibility: if you pass a single module (e.g. self.unet) and
@@ -98,7 +98,7 @@ class ExponentialMovingAverage:
 
         return self._normalize_modules(module_or_modules)
 
-    def _params(self, module: nn.Module) -> Iterator[Tuple[str, torch.Tensor]]:
+    def _params(self, module: nn.Module) -> Iterator[tuple[str, torch.Tensor]]:
         for name, p in module.named_parameters():
             if p is None:
                 continue
@@ -106,7 +106,7 @@ class ExponentialMovingAverage:
                 continue
             yield name, p
 
-    def _buffers(self, module: nn.Module) -> Iterator[Tuple[str, torch.Tensor]]:
+    def _buffers(self, module: nn.Module) -> Iterator[tuple[str, torch.Tensor]]:
         for name, b in module.named_buffers():
             if torch.is_tensor(b):
                 yield name, b
@@ -128,12 +128,12 @@ class ExponentialMovingAverage:
         dev = self._shadow_device_for(b)
         return b.detach().to(device=dev, dtype=b.dtype).clone()
 
-    def _init_from(self, modules: Dict[str, nn.Module]) -> None:
+    def _init_from(self, modules: dict[str, nn.Module]) -> None:
         self._shadow_params.clear()
         self._shadow_buffers.clear()
         for mod_name, mod in modules.items():
-            pmap: Dict[str, torch.Tensor] = {}
-            bmap: Dict[str, torch.Tensor] = {}
+            pmap: dict[str, torch.Tensor] = {}
+            bmap: dict[str, torch.Tensor] = {}
             for name, p in self._params(mod):
                 pmap[name] = self._clone_param(p)
             for name, b in self._buffers(mod):
@@ -142,7 +142,7 @@ class ExponentialMovingAverage:
             self._shadow_buffers[mod_name] = bmap
 
 
-    def reset(self, module_or_modules: Optional[ModuleOrDict] = None) -> None:
+    def reset(self, module_or_modules: ModuleOrDict | None = None) -> None:
         """Reset EMA to match the module(s) exactly (useful at start of fine-tune)."""
         self.num_updates = 0
         mods = self._select_modules(module_or_modules)
@@ -150,8 +150,8 @@ class ExponentialMovingAverage:
             self._init_from(mods)
         else:
             for mod_name, mod in mods.items():
-                pmap: Dict[str, torch.Tensor] = {}
-                bmap: Dict[str, torch.Tensor] = {}
+                pmap: dict[str, torch.Tensor] = {}
+                bmap: dict[str, torch.Tensor] = {}
                 for name, p in self._params(mod):
                     pmap[name] = self._clone_param(p)
                 for name, b in self._buffers(mod):
@@ -160,7 +160,7 @@ class ExponentialMovingAverage:
                 self._shadow_buffers[mod_name] = bmap
 
     @torch.no_grad()
-    def update(self, module_or_modules: Optional[ModuleOrDict] = None, *, step: int) -> None:
+    def update(self, module_or_modules: ModuleOrDict | None = None, *, step: int) -> None:
         """Update EMA from module parameters and copy buffers.
 
         If ``module_or_modules`` is None, updates all tracked modules.
@@ -203,17 +203,17 @@ class ExponentialMovingAverage:
 
         self.num_updates += 1
 
-    def ema_state_dict(self) -> Dict[str, Dict[str, torch.Tensor]]:
+    def ema_state_dict(self) -> dict[str, dict[str, torch.Tensor]]:
         """Return {module_name: module_state_dict_with_ema_tensors}."""
-        out: Dict[str, Dict[str, torch.Tensor]] = {}
+        out: dict[str, dict[str, torch.Tensor]] = {}
         for mod_name in self._modules.keys():
-            combined: Dict[str, torch.Tensor] = {}
+            combined: dict[str, torch.Tensor] = {}
             combined.update({k: v.detach().cpu() for k, v in self._shadow_params.get(mod_name).items()})
             combined.update({k: v.detach().cpu() for k, v in self._shadow_buffers.get(mod_name).items()})
             out[mod_name] = combined
         return out
 
-    def state_dict(self) -> Dict[str, object]:
+    def state_dict(self) -> dict[str, object]:
         """Serializable EMA tracker state (includes cfg + ema_state_dict)."""
         return {
             "cfg": {
@@ -229,7 +229,7 @@ class ExponentialMovingAverage:
             "ema_state_dict": self.ema_state_dict(),
         }
 
-    def load_state_dict(self, state: Dict[str, object]) -> None:
+    def load_state_dict(self, state: dict[str, object]) -> None:
         """Load EMA tracker state produced by :meth:`state_dict`."""
         cfg = state.get("cfg", {}) if isinstance(state, dict) else {}
         if isinstance(cfg, dict):
@@ -259,8 +259,8 @@ class ExponentialMovingAverage:
             buffer_names = {n for n, _ in self._buffers(mod)}
             param_names = {n for n, _ in self._params(mod)}
 
-            pmap: Dict[str, torch.Tensor] = {}
-            bmap: Dict[str, torch.Tensor] = {}
+            pmap: dict[str, torch.Tensor] = {}
+            bmap: dict[str, torch.Tensor] = {}
             for k, v in msd.items():
                 if not isinstance(k, str) or (not torch.is_tensor(v)):
                     continue
@@ -285,7 +285,7 @@ class ExponentialMovingAverage:
 
 
     @torch.no_grad()
-    def store(self, module_or_modules: Optional[ModuleOrDict] = None) -> None:
+    def store(self, module_or_modules: ModuleOrDict | None = None) -> None:
         """Store current params/buffers so they can be restored after a swap."""
         mods = self._select_modules(module_or_modules)
         for mod_name, mod in mods.items():
@@ -293,7 +293,7 @@ class ExponentialMovingAverage:
             self._stored_buffers[mod_name] = {name: b.detach().clone() for name, b in self._buffers(mod)}
 
     @torch.no_grad()
-    def copy_to(self, module_or_modules: Optional[ModuleOrDict] = None) -> None:
+    def copy_to(self, module_or_modules: ModuleOrDict | None = None) -> None:
         """Copy EMA params/buffers into the given module(s)."""
         mods = self._select_modules(module_or_modules)
         for mod_name, mod in mods.items():
@@ -309,7 +309,7 @@ class ExponentialMovingAverage:
                     b.data.copy_(shadow_b[name].to(device=b.device, dtype=b.dtype))
 
     @torch.no_grad()
-    def restore(self, module_or_modules: Optional[ModuleOrDict] = None) -> None:
+    def restore(self, module_or_modules: ModuleOrDict | None = None) -> None:
         """Restore params/buffers previously saved with :meth:`store`."""
         mods = self._select_modules(module_or_modules)
         for mod_name, mod in mods.items():

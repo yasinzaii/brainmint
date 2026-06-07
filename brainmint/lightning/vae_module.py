@@ -1,13 +1,11 @@
 import logging
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Any
 
-import torch
 import pytorch_lightning as pl
-from hydra.utils import instantiate
+import torch
 
-from monai.inferers import SlidingWindowInferer, SimpleInferer
-from brainmint.utils.gpumem_utils import SimpleGPUMemoryTracker
 from brainmint.inference.dynamic_inference import dynamic_infer
+from brainmint.utils.gpumem_utils import SimpleGPUMemoryTracker
 from brainmint.utils.state_dict_loader import StateDictLoaderMixin
 
 _LOG = logging.getLogger(__name__)
@@ -71,7 +69,7 @@ class VAEModule(StateDictLoaderMixin, pl.LightningModule):
         self.learning_rate = self.hparams["lr"]
 
         
-    def setup(self, stage: Optional[str] = None) -> None:
+    def setup(self, stage: str | None = None) -> None:
         if hasattr(super(), "setup"):
             super().setup(stage)  # Lightning setup()
 
@@ -80,7 +78,7 @@ class VAEModule(StateDictLoaderMixin, pl.LightningModule):
         self.memory_tracker = SimpleGPUMemoryTracker(device=self.device)
 
     
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         recon, z_mu, z_sigma = self.autoencoder(x)
         return recon, z_mu, z_sigma
 
@@ -89,7 +87,7 @@ class VAEModule(StateDictLoaderMixin, pl.LightningModule):
         recon, z_mu, z_sigma = dynamic_infer(inferer=self.inferer, model=self.autoencoder, images=x)
         return recon, z_mu, z_sigma
 
-    def run_inference(self, batch: Dict[str, Any]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def run_inference(self, batch: dict[str, Any]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Proxy for callbacks expecting a batch dict.
         Expects batch['image'] and ignores extra keys.
         """
@@ -105,16 +103,18 @@ class VAEModule(StateDictLoaderMixin, pl.LightningModule):
         #TODO - MAYBE LOG EPOC START DETAILS 
 
 
-    def training_step(self, batch: Dict[str, Any], batch_idx: int):
+    def training_step(self, batch: dict[str, Any], batch_idx: int):
         images = batch["image"].contiguous()
         bs = images.size(0)
 
         # Get optimizers (Manual opt)
         optims = self.optimizers()
         if isinstance(optims, (list, tuple)):
-            opt_g = optims[0]; opt_d = optims[1] if len(optims) > 1 else None
+            opt_g = optims[0]
+            opt_d = optims[1] if len(optims) > 1 else None
         else:
-            opt_g = optims; opt_d = None
+            opt_g = optims
+            opt_d = None
             
         has_disc = self.discriminator is not None and self.loss_manager.adv_w > 0 
 
@@ -170,7 +170,7 @@ class VAEModule(StateDictLoaderMixin, pl.LightningModule):
         bs = images.size(0)
 
         reconstruction, z_mu, z_sigma = self._run_inference(images)
-        val_loss = self.loss_manager.val_loss(images=images, recon= reconstruction,
+        self.loss_manager.val_loss(images=images, recon= reconstruction,
                             z_mu=z_mu, z_sigma=z_sigma, bs=bs, track_stats=True)
 
         self.loss_manager.inc_samples_count(bs=bs)  # Increment sample counter by batch size
@@ -264,8 +264,8 @@ class AutoencoderInferenceAdapter(StateDictLoaderMixin, pl.LightningModule):
     def __init__(
         self,
         autoencoder: torch.nn.Module,
-        inferer: Optional[Any] = None,
-        hparams: Optional[Dict[str, Any]] = None,
+        inferer: Any | None = None,
+        hparams: dict[str, Any] | None = None,
     ) -> None:
         super().__init__()
         self.save_hyperparameters(
@@ -301,11 +301,11 @@ class AutoencoderInferenceAdapter(StateDictLoaderMixin, pl.LightningModule):
             
         return self.autoencoder(images)
 
-    def setup(self, stage: Optional[str] = None) -> None:  # type: ignore[override]
+    def setup(self, stage: str | None = None) -> None:  # type: ignore[override]
         StateDictLoaderMixin.setup(self, stage)
 
     @torch.no_grad()
-    def run_inference(self, batch: Dict[str, Any]) -> Tuple[torch.Tensor, None, None]:
+    def run_inference(self, batch: dict[str, Any]) -> tuple[torch.Tensor, None, None]:
         images = batch["image"]
         outputs = self.forward(images)
 

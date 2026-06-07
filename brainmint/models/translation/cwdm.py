@@ -1,9 +1,10 @@
-from __future__ import annotations
-
 """BrainMint-facing cWDM modality translation wrapper."""
 
+from __future__ import annotations
+
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
-from typing import Any, Mapping, Tuple
+from typing import Any
 
 import torch
 from torch import nn
@@ -24,7 +25,7 @@ CWDM_CONDITIONING_ORDER = {
 @dataclass
 class cWDMConfig:
     device: str | torch.device | None = "auto"
-    cond_hwd: Tuple[int, int, int] = (224, 224, 160)
+    cond_hwd: tuple[int, int, int] = (224, 224, 160)
 
     ckpt_t1w: str = "MISSING"
     ckpt_t1ce: str = "MISSING"

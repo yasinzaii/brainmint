@@ -1,5 +1,7 @@
 
-from typing import Any, Dict, Mapping, Sequence, List
+from collections.abc import Mapping
+from typing import Any
+
 import torch
 from monai.transforms import MapTransform
 
@@ -63,22 +65,22 @@ class DemographicsConditioningd(MapTransform):
         if ordered_fields is None:
             raise TypeError("DemographicsConditioningd: config['ordered_fields'] must be a provided")
 
-        self.ordered_fields: List[str] = list(ordered_fields)
+        self.ordered_fields: list[str] = list(ordered_fields)
         if not self.ordered_fields:
             raise ValueError("DemographicsConditioningd: ordered_fields must be a non-empty list")
 
         # index mapping field_name -> slot in demo_values/demo_missing
-        self.field_indices: Dict[str, int] = {
+        self.field_indices: dict[str, int] = {
             name: i for i, name in enumerate(self.ordered_fields)
         }
 
         # Storage for per-field config (normalized)
-        self.fields_cfg: Dict[str, Dict[str, Any]] = {}
+        self.fields_cfg: dict[str, dict[str, Any]] = {}
 
         # Lists by kind (for debugging / future use)
-        self.numeric_fields: List[str] = []
-        self.categorical_fields: List[str] = []
-        self.ynd_fields: List[str] = []
+        self.numeric_fields: list[str] = []
+        self.categorical_fields: list[str] = []
+        self.ynd_fields: list[str] = []
 
         for name in self.ordered_fields:
             if name not in raw_fields_cfg:
@@ -128,7 +130,7 @@ class DemographicsConditioningd(MapTransform):
 
                 # Strict: only values explicitly listed are allowed.
                 # Store mapping as str -> int.
-                str2id: Dict[str, int] = {}
+                str2id: dict[str, int] = {}
                 for raw_val, idx in mapping.items():
                     sval = str(raw_val).strip().lower()
                     ival = int(idx)
@@ -157,7 +159,7 @@ class DemographicsConditioningd(MapTransform):
                     if not isinstance(replace, Mapping):
                         raise TypeError(f"Field '{name}' replace must be a mapping")
                     # Normalize keys/values to lowercase strings
-                    rep: Dict[str, str] = {}
+                    rep: dict[str, str] = {}
                     for k, v in replace.items():
                         rep[str(k).strip().lower()] = str(v).strip().lower()
                     fcfg["_replace"] = rep
@@ -183,7 +185,7 @@ class DemographicsConditioningd(MapTransform):
                 if isinstance(mapping, Mapping) and mapping:
                     na_values = ag_cfg.get("_na_values", [])
 
-                    range_bins: List[tuple[float, float, str]] = []
+                    range_bins: list[tuple[float, float, str]] = []
                     for lab in mapping.keys():
                         if lab in na_values or "-" not in lab:
                             continue
@@ -191,11 +193,11 @@ class DemographicsConditioningd(MapTransform):
                         try:
                             low = float(low_str.strip())
                             high = float(high_str.strip())
-                        except Exception:
+                        except Exception as exc:
                             raise ValueError(
                                 f"Cannot convert age_group label '{lab}' into "
                                 "low/high floats."
-                            )
+                            ) from exc
                         range_bins.append((low, high, lab))
 
                     range_bins.sort(key=lambda x: x[0])  # sort by low bound
@@ -298,10 +300,10 @@ class DemographicsConditioningd(MapTransform):
 
         try:
             age = float(sval)
-        except Exception:
+        except Exception as exc:
             raise ValueError(
                 f"Cannot convert age '{sval}' into float for deriving age_group."
-            )
+            ) from exc
 
         na_values = age_group_cfg.get("_na_values", [])
         na_token = na_values[0] if na_values else None
@@ -326,7 +328,7 @@ class DemographicsConditioningd(MapTransform):
 
 
     # main call
-    def __call__(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def __call__(self, data: dict[str, Any]) -> dict[str, Any]:
         d = dict(data)
 
         if self.in_key not in d:
@@ -353,9 +355,9 @@ class DemographicsConditioningd(MapTransform):
         # Derive age_group from age
         raw_demo = self._derive_age_group(raw_demo)
 
-        demo_dict: Dict[str, Any] = {}
-        values: List[float] = []
-        missing: List[bool] = []
+        demo_dict: dict[str, Any] = {}
+        values: list[float] = []
+        missing: list[bool] = []
 
         for name in self.ordered_fields:
             cfg = self.fields_cfg[name]

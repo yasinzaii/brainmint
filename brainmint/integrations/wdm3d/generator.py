@@ -1,12 +1,12 @@
-from __future__ import annotations
-
 """WDM-3D upstream generator builders."""
+
+from __future__ import annotations
 
 import inspect
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from torch import nn
 
@@ -81,10 +81,10 @@ def build_wdm3d_components(
     *,
     ckpt_path: str | Path,
     preset: str = "brats_unet_128",
-    model_kwargs: Optional[dict[str, Any]] = None,
+    model_kwargs: dict[str, Any] | None = None,
     wavelet: str = "haar",
-    state_key: Optional[str] = "<root>",
-    loader: Optional[str] = None,
+    state_key: str | None = "<root>",
+    loader: str | None = None,
     strict: bool | str = True,
     freeze: bool = True,
     set_eval: bool = True,

@@ -1,15 +1,15 @@
 # brainmint/external/sys_path.py
 from __future__ import annotations
 
+import sys
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
-import sys
-from typing import Iterator, Sequence, Union
 
-PathLike = Union[str, Path]
+PathLike = str | Path
 
 
-def resolve_path(path: Union[str, Path]) -> Path:
+def resolve_path(path: str | Path) -> Path:
     # strict=False works even for paths that do not exist yet
     p = Path(path).expanduser()
     try:

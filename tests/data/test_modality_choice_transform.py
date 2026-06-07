@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import pytest
-
 import torch
 
 from brainmint.data.transforms.modality_choice import ChooseStreamForModalitiesd, SharedChoiceState
-
 
 ALL_MODALITIES = ["t1w", "t2w", "flair", "t1ce"]
 

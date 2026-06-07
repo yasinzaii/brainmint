@@ -25,7 +25,7 @@ def dynamic_infer(inferer: Any, model: Any, images: torch.Tensor) -> Any:
     if len(original_roi) != len(spatial_dims):
         raise ValueError(f"ROI length ({len(original_roi)}) does not match spatial dimensions ({len(spatial_dims)}).")
 
-    inferer.roi_size = [min(roi, size) for roi, size in zip(original_roi, spatial_dims)]
+    inferer.roi_size = [min(roi, size) for roi, size in zip(original_roi, spatial_dims, strict=True)]
     try:
         return inferer(network=model, inputs=images)
     finally:

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 import pytorch_lightning as pl
 import torch
@@ -37,10 +38,10 @@ class DiffusionInferenceModule(StateDictLoaderMixin, pl.LightningModule):
         pipeline: DiffusionPipeline,
         diffusion_unet: nn.Module,
         noise_scheduler: Any,
-        autoencoder: Optional[nn.Module] = None,
-        extra_modules: Optional[Dict[str, Any]] = None,
-        scalars: Optional[Dict[str, Any]] = None,
-        hparams: Optional[Dict[str, Any]] = None,
+        autoencoder: nn.Module | None = None,
+        extra_modules: dict[str, Any] | None = None,
+        scalars: dict[str, Any] | None = None,
+        hparams: dict[str, Any] | None = None,
     ) -> None:
         super().__init__()
 
@@ -57,7 +58,7 @@ class DiffusionInferenceModule(StateDictLoaderMixin, pl.LightningModule):
         #   - ``.to(device)`` moves it with the module,
         #   - weights can be loaded via StateDictLoaderMixin (targets can reference the key).
         # Non-modules (tokenizers, callables, configs) remain in the context only.
-        self._extra_modules: Dict[str, Any] = dict(extra_modules or {})
+        self._extra_modules: dict[str, Any] = dict(extra_modules or {})
         for k, v in list(self._extra_modules.items()):
             if isinstance(v, nn.Module):
                 if hasattr(self, k):
@@ -66,9 +67,9 @@ class DiffusionInferenceModule(StateDictLoaderMixin, pl.LightningModule):
                         f"{type(self).__name__}. Choose a different key."
                     )
                 setattr(self, k, v)
-        self._scalars: Dict[str, Any] = dict(scalars or {})
+        self._scalars: dict[str, Any] = dict(scalars or {})
 
-    def setup(self, stage: Optional[str] = None) -> None:
+    def setup(self, stage: str | None = None) -> None:
         # StateDictLoaderMixin hooks into Lightning's setup lifecycle.
         super().setup(stage)
         self._validate_requirements()
@@ -84,7 +85,7 @@ class DiffusionInferenceModule(StateDictLoaderMixin, pl.LightningModule):
         if missing:
             raise KeyError(f"Missing required modules for pipeline: {missing}. Available: {sorted(ctx.modules.keys())}")
 
-    def build_context(self, *, device: Optional[torch.device] = None) -> InferenceContext:
+    def build_context(self, *, device: torch.device | None = None) -> InferenceContext:
         dev = self.device if device is None else device
         # Prefer UNet param dtype if available; otherwise fall back to float32.
         try:
@@ -92,7 +93,7 @@ class DiffusionInferenceModule(StateDictLoaderMixin, pl.LightningModule):
         except StopIteration:
             dtype = torch.float32
 
-        modules: Dict[str, Any] = {
+        modules: dict[str, Any] = {
             "unet": self.unet,
             "noise_scheduler": self.noise_scheduler,
         }
@@ -105,6 +106,6 @@ class DiffusionInferenceModule(StateDictLoaderMixin, pl.LightningModule):
         return InferenceContext(device=dev, dtype=dtype, modules=modules, scalars=self._scalars)
 
     @torch.no_grad()
-    def run(self, batch: Mapping[str, Any], *, device: Optional[torch.device] = None) -> Dict[str, Any]:
+    def run(self, batch: Mapping[str, Any], *, device: torch.device | None = None) -> dict[str, Any]:
         ctx = self.build_context(device=device)
         return self.pipeline.run(batch, ctx=ctx)

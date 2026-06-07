@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Mapping, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import torch
 from torch import nn
@@ -12,7 +13,7 @@ from brainmint.utils.state_dict_loader import load_weight_specs
 
 log = logging.getLogger(__name__)
 
-def _first_module_parameter(modules: Mapping[str, Any]) -> Optional[nn.Parameter]:
+def _first_module_parameter(modules: Mapping[str, Any]) -> nn.Parameter | None:
     for module in modules.values():
         if isinstance(module, nn.Module):
             parameter = next(module.parameters(), None)
@@ -29,9 +30,9 @@ class ContextPipelineRunner(nn.Module):
         *,
         pipeline: DiffusionPipeline,
         auto_load_wrapper_weights: bool = False,
-        modules: Optional[Dict[str, Any]] = None,
-        scalars: Optional[Dict[str, Any]] = None,
-        weight_loads: Optional[Sequence[Mapping[str, Any]]] = None,
+        modules: dict[str, Any] | None = None,
+        scalars: dict[str, Any] | None = None,
+        weight_loads: Sequence[Mapping[str, Any]] | None = None,
     ) -> None:
         super().__init__()
         self.pipeline = pipeline
@@ -40,7 +41,7 @@ class ContextPipelineRunner(nn.Module):
         self._weights_loaded = False
         self._loaded_targets: set[str] = set()
 
-        self._modules_dict: Dict[str, Any] = dict(modules or {})
+        self._modules_dict: dict[str, Any] = dict(modules or {})
         for key, value in list(self._modules_dict.items()):
             if isinstance(value, nn.Module):
                 if hasattr(self, key):
@@ -50,7 +51,7 @@ class ContextPipelineRunner(nn.Module):
                     )
                 setattr(self, key, value)
 
-        self._scalars: Dict[str, Any] = dict(scalars or {})
+        self._scalars: dict[str, Any] = dict(scalars or {})
 
     def load_weights(self) -> None:
         if self._weights_loaded:
@@ -68,7 +69,7 @@ class ContextPipelineRunner(nn.Module):
         self._weights_loaded = True
         self._validate_requirements()
 
-    def build_context(self, *, device: Optional[torch.device] = None) -> InferenceContext:
+    def build_context(self, *, device: torch.device | None = None) -> InferenceContext:
         parameter = _first_module_parameter(self._modules_dict)
         dev = device or (parameter.device if parameter is not None else torch.device("cpu"))
         dtype = parameter.dtype if parameter is not None else torch.float32
@@ -87,7 +88,7 @@ class ContextPipelineRunner(nn.Module):
             )
 
     @torch.no_grad()
-    def run(self, batch: Mapping[str, Any], *, device: Optional[torch.device] = None) -> Dict[str, Any]:
+    def run(self, batch: Mapping[str, Any], *, device: torch.device | None = None) -> dict[str, Any]:
         self.load_weights()
         ctx = self.build_context(device=device)
         return self.pipeline.run(batch, ctx=ctx)

@@ -1,6 +1,9 @@
-from typing import Any, Dict, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
+
 import torch
 from monai.transforms import MapTransform, Transform
+
 
 class MapModalityToLabeld(MapTransform):
     """Read 'modality' (str) and write <key_name> (torch.long) using a 0-based mapping."""
@@ -9,14 +12,14 @@ class MapModalityToLabeld(MapTransform):
         mapping: Mapping[str, int],
         allow_missing_keys: bool = False,
         fail_on_unknown: bool = True,
-        key_name: Optional[str] = None
+        key_name: str | None = None
     ):
         super().__init__(keys=("modality",), allow_missing_keys=allow_missing_keys)
         self.mapping = dict(mapping)
         self.fail_on_unknown = bool(fail_on_unknown)
         self.key_name = key_name
 
-    def __call__(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def __call__(self, data: dict[str, Any]) -> dict[str, Any]:
         d = dict(data)
         if "modality" not in d:
             return d  # nothing to do
@@ -44,7 +47,7 @@ class ConstantModalityLabeld(Transform):
         self.overwrite = bool(overwrite)
         print(f"Conditioning 'ConstantModalityLabeld', Const Target is: {label}")
 
-    def __call__(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def __call__(self, data: dict[str, Any]) -> dict[str, Any]:
         d = dict(data)
         if not self.overwrite and self.key_name in d:
             return d

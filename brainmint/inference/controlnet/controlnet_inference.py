@@ -3,13 +3,12 @@ from __future__ import annotations
 import logging
 import warnings
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import torch
 import torch.nn as nn
-
-from monai.networks.schedulers.ddpm import DDPMPredictionType
 from monai.networks.schedulers import DDPMScheduler, RFlowScheduler
+from monai.networks.schedulers.ddpm import DDPMPredictionType
 
 from brainmint.utils.state_dict_loader import load_weight_specs
 
@@ -20,7 +19,7 @@ class ControlNetInferenceOutputs:
     """Outputs for modality-translation inference."""
     sample: torch.Tensor                  # image-space (B, C, Z, Y, X)
     latent_mu: torch.Tensor               # unscaled latent mu (B, C_lat, Z, Y, X)
-    latent_sigma: Optional[torch.Tensor]  # latent sigma from re-encoding (B, C_lat, Z, Y, X)
+    latent_sigma: torch.Tensor | None  # latent sigma from re-encoding (B, C_lat, Z, Y, X)
 
 
 class ControlNetInferenceModule(nn.Module):
@@ -43,21 +42,21 @@ class ControlNetInferenceModule(nn.Module):
 
     def __init__(
         self,
-        autoencoder: Optional[nn.Module],
+        autoencoder: nn.Module | None,
         diffusion_unet: nn.Module,
         noise_scheduler: Any,
-        hparams: Dict[str, Any],
+        hparams: dict[str, Any],
         # Stage A generates T2w
-        controlnet_stage_a: Optional[nn.Module] = None,
+        controlnet_stage_a: nn.Module | None = None,
         # Stage B generates FLAIR
-        controlnet_stage_b: Optional[nn.Module] = None,
+        controlnet_stage_b: nn.Module | None = None,
         # Stage C generates T1ce
-        controlnet_stage_c: Optional[nn.Module] = None,
-        demographics_encoder: Optional[nn.Module] = None,
+        controlnet_stage_c: nn.Module | None = None,
+        demographics_encoder: nn.Module | None = None,
     ) -> None:
         super().__init__()
 
-        self.hparams: Dict[str, Any] = dict(hparams) if hparams is not None else {}
+        self.hparams: dict[str, Any] = dict(hparams) if hparams is not None else {}
         self._loaded_once = False
         self._loaded_targets: set[str] = set()
 
@@ -126,7 +125,7 @@ class ControlNetInferenceModule(nn.Module):
         self._modality_max = max(vals)
 
         # Control keys per generated target.
-        self.control_keys_by_target: Dict[str, List[str]] = {
+        self.control_keys_by_target: dict[str, list[str]] = {
             str(k).strip().lower(): [str(x).strip().lower() for x in (v or [])]
             for k, v in dict(hp.get("control_keys_by_target", {}) or {}).items()
         }
@@ -212,7 +211,7 @@ class ControlNetInferenceModule(nn.Module):
         self._loaded_targets.update(load_weight_specs(self, specs))
         self._loaded_once = True
 
-    def setup(self, stage: Optional[str] = None) -> None:  # noqa: ARG002
+    def setup(self, stage: str | None = None) -> None:  # noqa: ARG002
         """Compatibility hook for scripts that previously used Lightning setup()."""
 
         self.load_weights()
@@ -245,7 +244,7 @@ class ControlNetInferenceModule(nn.Module):
             )
         return cn
 
-    def _control_keys_for(self, target_modality: str) -> List[str]:
+    def _control_keys_for(self, target_modality: str) -> list[str]:
         target = str(target_modality).strip().lower()
         keys = self.control_keys_by_target.get(target)
         if not keys:
@@ -273,7 +272,7 @@ class ControlNetInferenceModule(nn.Module):
         self._validate_labels(labels)
         return labels
 
-    def _encode_demographics(self, batch: Dict[str, Any]) -> Optional[torch.Tensor]:
+    def _encode_demographics(self, batch: dict[str, Any]) -> torch.Tensor | None:
         if not getattr(self.unet, "with_demographics", False):
             return None
         if self.demographics_encoder is None:
@@ -301,7 +300,7 @@ class ControlNetInferenceModule(nn.Module):
             raise ValueError(f"demographics embedding must be 2D (B,D), got {dem_emb.shape}")
         return dem_emb
 
-    def _get_is_mod_synthetic(self, batch: Dict[str, Any], controlnet: nn.Module) -> Optional[torch.Tensor]:
+    def _get_is_mod_synthetic(self, batch: dict[str, Any], controlnet: nn.Module) -> torch.Tensor | None:
         """If the selected controlnet uses synthetic embedding, batch MUST provide is_mod_synthetic."""
         if controlnet is None:
             return None
@@ -329,8 +328,8 @@ class ControlNetInferenceModule(nn.Module):
             )
         return v
 
-    def _prep_controlnet_cond(self, batch: Dict[str, Any], control_keys: List[str], controlnet: nn.Module) -> torch.Tensor:
-        xs: List[torch.Tensor] = []
+    def _prep_controlnet_cond(self, batch: dict[str, Any], control_keys: list[str], controlnet: nn.Module) -> torch.Tensor:
+        xs: list[torch.Tensor] = []
         for k in control_keys:
             if k not in batch:
                 raise KeyError(f"Missing control key {k!r} in batch")
@@ -372,7 +371,7 @@ class ControlNetInferenceModule(nn.Module):
         raise ValueError("Autoencoder missing callable decode()")
 
     @torch.no_grad()
-    def encode_mu_sigma(self, images: torch.Tensor) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+    def encode_mu_sigma(self, images: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor | None]:
         if self.autoencoder is None:
             raise RuntimeError("autoencoder is None but encode_mu_sigma was requested.")
         enc = getattr(self.autoencoder, "encode", None)
@@ -388,13 +387,13 @@ class ControlNetInferenceModule(nn.Module):
     @torch.no_grad()
     def sample_latent_controlled(
         self,
-        output_size: Tuple[int, int, int],
+        output_size: tuple[int, int, int],
         ctrl: torch.Tensor,
         controlnet: nn.Module,
         class_labels: torch.Tensor,
-        demographics_embedding: Optional[torch.Tensor] = None,
-        is_mod_synthetic: Optional[torch.Tensor] = None,
-        num_inference_steps: Optional[int] = None,
+        demographics_embedding: torch.Tensor | None = None,
+        is_mod_synthetic: torch.Tensor | None = None,
+        num_inference_steps: int | None = None,
     ) -> torch.Tensor:
         device = self.device
         b = ctrl.shape[0]
@@ -416,7 +415,8 @@ class ControlNetInferenceModule(nn.Module):
             if isinstance(self.noise_scheduler, DDPMScheduler) and steps < self.noise_scheduler.num_train_timesteps:
                 warnings.warn(
                     "DDPMScheduler num_inference_steps="
-                    f"{steps} < num_train_timesteps={self.noise_scheduler.num_train_timesteps}"
+                    f"{steps} < num_train_timesteps={self.noise_scheduler.num_train_timesteps}",
+                    stacklevel=2,
                 )
 
         all_t = self.noise_scheduler.timesteps.to(device)
@@ -426,7 +426,7 @@ class ControlNetInferenceModule(nn.Module):
             next_t_val = all_t[i + 1].item() if i + 1 < len(all_t) else 0
             t_batch = torch.full((b,), t_val, device=device, dtype=all_t.dtype)
 
-            cn_kwargs: Dict[str, Any] = dict(
+            cn_kwargs: dict[str, Any] = dict(
                 x=img,
                 timesteps=t_batch,
                 controlnet_cond=ctrl,
@@ -439,7 +439,7 @@ class ControlNetInferenceModule(nn.Module):
 
             down_res, mid_res = controlnet(**cn_kwargs)
 
-            unet_kwargs: Dict[str, Any] = dict(
+            unet_kwargs: dict[str, Any] = dict(
                 x=img,
                 timesteps=t_batch,
                 down_block_additional_residuals=down_res,
@@ -463,9 +463,9 @@ class ControlNetInferenceModule(nn.Module):
     @torch.no_grad()
     def run_inference_bs(
         self,
-        batch: Dict[str, Any],
+        batch: dict[str, Any],
         target_modality: str,
-        num_inference_steps: Optional[int] = None,
+        num_inference_steps: int | None = None,
     ) -> ControlNetInferenceOutputs:
         # Guard against running with random weights, a common cause of pure-noise outputs.
         if self.require_weights_loaded and not getattr(self, "_loaded_once", True):
@@ -530,9 +530,9 @@ class ControlNetInferenceModule(nn.Module):
     @torch.no_grad()
     def forward(
         self,
-        batch: Dict[str, Any],
+        batch: dict[str, Any],
         modality: str,  # target modality
-        num_inference_steps: Optional[int] = None,
+        num_inference_steps: int | None = None,
     ) -> Any:
         """Call signature: module(batch, modality='t2w') -> generated image (B, C, Z, Y, X)."""
         out = self.run_inference_bs(

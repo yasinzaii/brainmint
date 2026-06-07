@@ -3,22 +3,22 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Iterable, Mapping, Optional, Sequence
+import multiprocessing as mp
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from typing import Any
 
 import torch
 from monai.transforms import Transform
 
 logger = logging.getLogger(__name__)
 
-import multiprocessing as mp
-from dataclasses import dataclass
-
 
 @dataclass
 class SharedSamplingState:
     """State shared across DataLoader workers for partial sampling config (optional)."""
 
-    config: Dict[str, Any]
+    config: dict[str, Any]
     shared: bool = True
 
     def __post_init__(self) -> None:
@@ -30,7 +30,7 @@ class SharedSamplingState:
             self._mgr = None
             self._store = {"config": dict(self.config)}
 
-    def __getstate__(self) -> Dict[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         # IMPORTANT:
         # - When shared=True, keep the manager proxy (_store) so workers see updates.
         # - Never try to pickle the Manager object itself (_mgr).
@@ -51,7 +51,7 @@ class SharedSamplingState:
             self._store = {"config": dict(state.get("config", {}))}
         self.config = dict(self.get_config())
     
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         return dict(self._store["config"])
 
     def set_config(self, config: Mapping[str, Any]) -> None:
@@ -64,7 +64,7 @@ def _lower_list(values: Sequence[str]) -> list[str]:
     return [str(v).lower() for v in values]
 
 
-def _lookup_stream_value(stream_dict: Any, mod: str, *, allow_missing: bool) -> Optional[Any]:
+def _lookup_stream_value(stream_dict: Any, mod: str, *, allow_missing: bool) -> Any | None:
     if not isinstance(stream_dict, Mapping):
         if allow_missing:
             return None
@@ -85,7 +85,7 @@ class MapChosenStreamToKeysd(Transform):
         self,
         *,
         modalities: Sequence[str],
-        stream_key_map: Optional[Mapping[str, Mapping[str, Any]]] = None,
+        stream_key_map: Mapping[str, Mapping[str, Any]] | None = None,
         allow_missing_keys: bool = False,
     ) -> None:
         self.modalities = _lower_list(modalities)
@@ -98,7 +98,7 @@ class MapChosenStreamToKeysd(Transform):
         }
         self.allow_missing_keys = bool(allow_missing_keys)
 
-    def __call__(self, data: Mapping[str, Any]) -> Dict[str, Any]:
+    def __call__(self, data: Mapping[str, Any]) -> dict[str, Any]:
         d = dict(data)
         if not self.stream_key_map:
             return d
@@ -133,12 +133,12 @@ class SampleLatentsFromKeysd(Transform):
         self,
         *,
         modalities: Sequence[str],
-        mu_key_map: Optional[Mapping[str, str]] = None,
-        sigma_key_map: Optional[Mapping[str, str]] = None,
-        out_key_map: Optional[Mapping[str, str]] = None,
-        partial_sampling: Optional[Mapping[str, Any]] = None,
+        mu_key_map: Mapping[str, str] | None = None,
+        sigma_key_map: Mapping[str, str] | None = None,
+        out_key_map: Mapping[str, str] | None = None,
+        partial_sampling: Mapping[str, Any] | None = None,
         partial_sampling_enabled: bool = True,
-        sampling_state: Optional[SharedSamplingState] = None,
+        sampling_state: SharedSamplingState | None = None,
         require_sigma_for_sampling: bool = False,
         drop_input_keys: bool = True,
         allow_missing_keys: bool = False,
@@ -158,7 +158,7 @@ class SampleLatentsFromKeysd(Transform):
         else:
             self.sampling_state = SharedSamplingState(config=dict(self.partial_sampling), shared=True)
 
-    def _get_partial_sampling(self) -> Dict[str, Any]:
+    def _get_partial_sampling(self) -> dict[str, Any]:
         return self.sampling_state.get_config()
 
     def _apply_partial_sampling(self, z_mu: torch.Tensor, z_sigma: torch.Tensor) -> torch.Tensor:
@@ -184,9 +184,9 @@ class SampleLatentsFromKeysd(Transform):
         mask = (torch.rand(mask_shape, device=z_mu.device) < p).float()
         return z_mu + mask * (alpha * z_sigma * eps)
 
-    def __call__(self, data: Mapping[str, Any]) -> Dict[str, Any]:
+    def __call__(self, data: Mapping[str, Any]) -> dict[str, Any]:
         d = dict(data)
-        for idx, mod in enumerate(self.modalities):
+        for _idx, mod in enumerate(self.modalities):
             mu_key = self.mu_key_map.get(mod)
             sigma_key = self.sigma_key_map.get(mod)
             out_key = self.out_key_map.get(mod)

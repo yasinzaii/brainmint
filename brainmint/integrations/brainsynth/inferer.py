@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 
 # Copied from https://github.com/AmigoLab/BrainSynth/blob/05adc8cf3a248a1d7d7a55f4d0111373dc90d5eb/src/inferer/vqvae.py
 import torch
@@ -63,7 +63,7 @@ class VQVAEDecodingInferer(Inferer):
         self.d_network = d_network
 
     def __call__(
-        self, inputs: List[torch.Tensor], network: VQVAEBase, *args: Any, **kwargs: Any
+        self, inputs: list[torch.Tensor], network: VQVAEBase, *args: Any, **kwargs: Any
     ):
         """
         Inferer for the VQVAE models that decodes autoregressive samples and if possible saves the adversarial loss.

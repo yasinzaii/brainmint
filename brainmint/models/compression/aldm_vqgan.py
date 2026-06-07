@@ -1,9 +1,9 @@
-from __future__ import annotations
-
 """BrainMint-facing ALDM VQ-GAN compression wrapper."""
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 from torch import nn
 
@@ -21,8 +21,8 @@ class ALDMVQGAN(nn.Module):
     def __init__(
         self,
         *,
-        ckpt_path: Union[str, Path],
-        config_path: Optional[Union[str, Path]] = None,
+        ckpt_path: str | Path,
+        config_path: str | Path | None = None,
     ) -> None:
         super().__init__()
         self.model = build_stage1_vqgan(

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
-
-from omegaconf import DictConfig, OmegaConf
+from typing import Any
 
 import torch
+from omegaconf import DictConfig, OmegaConf
 from torch import nn
 
 from brainmint.integrations.hagan.generator import build_hagan_generator
@@ -23,8 +22,8 @@ class HaGANConfig:
 
     # Generator checkpoint
     g_ckpt_path: str = ""
-    state_key: Optional[str] = "model.module"
-    loader: Optional[str] = None
+    state_key: str | None = "model.module"
+    loader: str | None = None
     strict: bool | str = True
     freeze: bool = True
     set_eval: bool = True
@@ -36,7 +35,7 @@ class HaGANConfig:
 class HaGANGenerator(nn.Module):
     """BrainMint-facing HA-GAN generator wrapper."""
 
-    def __init__(self, *, cfg: Optional[HaGANConfig] = None, **kwargs: Any) -> None:
+    def __init__(self, *, cfg: HaGANConfig | None = None, **kwargs: Any) -> None:
         super().__init__()
 
         if isinstance(cfg, DictConfig):
@@ -77,9 +76,9 @@ class HaGANGenerator(nn.Module):
         self,
         *,
         batch_size: int,
-        device: Optional[torch.device] = None,
-        dtype: Optional[torch.dtype] = None,
-        class_label: Optional[torch.Tensor] = None,
+        device: torch.device | None = None,
+        dtype: torch.dtype | None = None,
+        class_label: torch.Tensor | None = None,
     ) -> torch.Tensor:
         device = device or next(self.parameters()).device
         dtype = dtype or next(self.parameters()).dtype

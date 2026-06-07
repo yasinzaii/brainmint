@@ -1,4 +1,5 @@
-from typing import Any, Dict, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 import torch
 from torch import nn
@@ -42,7 +43,7 @@ class DemographicsEmbeddingConditioning(ConditioningBuilderBase):
         *,
         latent_ref: torch.Tensor,
         ctx: InferenceContext,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         if self.values_key not in batch:
             raise KeyError(f"Batch missing key '{self.values_key}'")
         if self.missing_key not in batch:

@@ -1,14 +1,13 @@
 import sys
 from pathlib import Path
 
-import torch
 import pytest
+import pytorch_lightning as pl
+import torch
 from hydra import compose, initialize_config_dir
 from hydra.utils import instantiate
-from omegaconf import open_dict, OmegaConf
-import pytorch_lightning as pl
 from monai.data import DataLoader
-
+from omegaconf import OmegaConf, open_dict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -144,7 +143,7 @@ def test_controlnet_fast_loop(tmp_path, latent_channels):
         cfg = compose(
             config_name="exp/maisi/train_controlnet",
             overrides=[
-                "model.shared.latent_channels={0}".format(latent_channels),
+                f"model.shared.latent_channels={latent_channels}",
                 
                 "model.autoencoder.autoencoder_maisi.norm_float16=false",
 
@@ -162,7 +161,7 @@ def test_controlnet_fast_loop(tmp_path, latent_channels):
                 "model.controlnet.controlnet_maisi.conditioning_embedding_num_channels=[4, 4, 64]",
                 # "model.controlnet.controlnet_maisi.num_class_embeds=4",
                 
-                "lightning.controlnet_lightning.hparams.latent_channels={0}".format(latent_channels),
+                f"lightning.controlnet_lightning.hparams.latent_channels={latent_channels}",
                 "lightning.controlnet_lightning.hparams.scale_factor=1.0",
                 "lightning.controlnet_lightning.hparams.modality_map={t1w:0,t2w:1}",
  

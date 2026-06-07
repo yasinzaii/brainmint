@@ -1,8 +1,9 @@
-from __future__ import annotations
-
 """BrainMint-facing BraSyn / BrainLesion MissingMRI translation wrappers."""
 
-from typing import Any, Mapping
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any
 
 import torch
 

@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 TEST_CONFIG_DIR = PROJECT_ROOT / "tests" / "fixtures" / "configs"
 
-from tests.helpers.brainscape import make_minimal_brainscape_dataset
+from tests.helpers.brainscape import make_minimal_brainscape_dataset  # noqa: E402
 
 
 def _generate_dummy_latent_dataset(tmp_path: Path) -> tuple[Path, Path]:

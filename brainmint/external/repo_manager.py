@@ -9,22 +9,22 @@ import sys
 import time
 import uuid
 import zipfile
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator, Optional, Sequence, Union
 
 from .sys_path import repo_on_syspath, resolve_path
 
 log = logging.getLogger(__name__)
 
-PathLike = Union[str, Path]
+PathLike = str | Path
 
 BRAINMINT_EXTERNAL_ROOT_ENV = "BRAINMINT_EXTERNAL_ROOT"
-_EXTERNAL_REPO_ROOT_OVERRIDE: Optional[Path] = None
+_EXTERNAL_REPO_ROOT_OVERRIDE: Path | None = None
 
 
-def set_external_repo_root(path: Optional[PathLike]) -> None:
+def set_external_repo_root(path: PathLike | None) -> None:
     """Set the process-wide external repo root."""
 
     global _EXTERNAL_REPO_ROOT_OVERRIDE
@@ -44,15 +44,15 @@ class RepoSpec:
     python_roots: Sequence[str] = (".",)
 
     # Optional local bootstrap zip
-    zip_filename: Optional[str] = None
+    zip_filename: str | None = None
 
     # Optional network sources
-    git_url: Optional[str] = None
-    git_ref: Optional[str] = None  # branch/tag/commit
+    git_url: str | None = None
+    git_ref: str | None = None  # branch/tag/commit
     strip_git_dir: bool = False
 
-    hf_repo_id: Optional[str] = None
-    hf_revision: Optional[str] = None
+    hf_repo_id: str | None = None
+    hf_revision: str | None = None
 
 
 def _platform_user_cache_root() -> Path:
@@ -96,7 +96,7 @@ class ExternalRepoManager:
     def __init__(
         self,
         *,
-        external_repo_root: Optional[PathLike] = None,
+        external_repo_root: PathLike | None = None,
         lock_timeout_s: int = 600,
         lock_poll_s: float = 0.5,
     ) -> None:
@@ -173,7 +173,7 @@ class ExternalRepoManager:
         except StopIteration:
             return False
 
-    def _find_zip(self, spec: RepoSpec) -> Optional[Path]:
+    def _find_zip(self, spec: RepoSpec) -> Path | None:
         candidates = []
         if spec.zip_filename:
             candidates += [
@@ -207,7 +207,7 @@ class ExternalRepoManager:
         if tmp.exists():
             shutil.rmtree(tmp, ignore_errors=True)
 
-    def _clone_git(self, url: str, repo_dir: Path, *, ref: Optional[str], strip_git_dir: bool) -> None:
+    def _clone_git(self, url: str, repo_dir: Path, *, ref: str | None, strip_git_dir: bool) -> None:
         tmp = repo_dir.with_name(repo_dir.name + f".tmp-{uuid.uuid4().hex}")
         if tmp.exists():
             shutil.rmtree(tmp, ignore_errors=True)
@@ -236,7 +236,7 @@ class ExternalRepoManager:
             shutil.rmtree(repo_dir, ignore_errors=True)
         tmp.replace(repo_dir)
 
-    def _snapshot_hf(self, repo_id: str, repo_dir: Path, *, revision: Optional[str]) -> None:
+    def _snapshot_hf(self, repo_id: str, repo_dir: Path, *, revision: str | None) -> None:
         try:
             from huggingface_hub import snapshot_download  # type: ignore
         except Exception as e:
@@ -257,7 +257,7 @@ class ExternalRepoManager:
         tmp.replace(repo_dir)
 
     def _run(self, cmd: Sequence[str]) -> None:
-        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        proc = subprocess.run(cmd, capture_output=True, text=True)
         if proc.returncode != 0:
             raise RuntimeError(
                 f"Command failed: {' '.join(cmd)}\n"
@@ -282,9 +282,9 @@ class ExternalRepoManager:
             try:
                 lock_dir.mkdir(parents=False, exist_ok=False)
                 break
-            except FileExistsError:
+            except FileExistsError as exc:
                 if time.time() - start > self.lock_timeout_s:
-                    raise TimeoutError(f"Timed out waiting for lock {lock_dir}")
+                    raise TimeoutError(f"Timed out waiting for lock {lock_dir}") from exc
                 time.sleep(self.lock_poll_s)
         try:
             yield
@@ -296,8 +296,8 @@ class ExternalRepoManager:
 def import_external_repo(
     spec: RepoSpec,
     *,
-    repo_root: Optional[Union[str, Path]] = None,
-    external_repo_root: Optional[Union[str, Path]] = None,
+    repo_root: str | Path | None = None,
+    external_repo_root: str | Path | None = None,
     allow_network: bool = True,
     overwrite: bool = False,
     delete_zip_after_extract: bool = True,
@@ -309,7 +309,7 @@ def import_external_repo(
     :func:`default_external_repo_root` and materializes ``external_repo_root/repos/<repo>``.
     """
     # If repo_root exists, use it directly; otherwise ignore it (common when Hydra cwd changes).
-    rr: Optional[Path] = resolve_path(repo_root) if repo_root is not None else None
+    rr: Path | None = resolve_path(repo_root) if repo_root is not None else None
     if rr is None or not rr.exists():
         if rr is not None and not rr.exists():
             log.warning(

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """BrainMint-facing ALDM modality translation wrapper.
 
 There are two practical inference modes:
@@ -13,11 +11,14 @@ input/output scaling. External ALDM imports and model construction live under
 ``brainmint.integrations.aldm``.
 """
 
+from __future__ import annotations
+
 import logging
+from collections.abc import Mapping, Sequence
 from contextlib import nullcontext
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any
 
 import torch
 from omegaconf import DictConfig, OmegaConf
@@ -38,15 +39,15 @@ class ALDMConfig:
     mode: str = "ldm"
 
     # Optional upstream config overrides. None means use ALDM repo defaults.
-    ldm_config_path: Optional[str] = None
-    vqgan_stage2_config_path: Optional[str] = None
+    ldm_config_path: str | None = None
+    vqgan_stage2_config_path: str | None = None
 
     # Checkpoints. Translation uses the LDM checkpoint and/or the VQ-GAN stage-2 checkpoint.
     ldm_ckpt_path: str = ""
     vqgan_stage2_ckpt_path: str = ""
 
     # ALDM modality label order (upstream BraTS): [t1, t1ce, t2, flair]
-    modality_order: Tuple[str, ...] = ("t1", "t1ce", "t2", "flair")
+    modality_order: tuple[str, ...] = ("t1", "t1ce", "t2", "flair")
 
     # Sampling defaults for mode="ldm"
     ddim_steps: int = 200
@@ -72,8 +73,8 @@ class ALDMTranslationGeneratorConfig:
     mode: str = "ldm"
     ldm_ckpt_path: str = ""
     vqgan_stage2_ckpt_path: str = ""
-    ldm_config_path: Optional[str] = None
-    vqgan_stage2_config_path: Optional[str] = None
+    ldm_config_path: str | None = None
+    vqgan_stage2_config_path: str | None = None
 
     # ALDM/BraTS volume size in BrainMint tensor order (H,W,D).
     model_hwd: Sequence[int] = (144, 192, 144)
@@ -105,7 +106,7 @@ def _norm_mod_name(name: str) -> str:
 class ALDMModalityTranslator(nn.Module):
     """In-process ALDM modality translator exposed through BrainMint conventions."""
 
-    def __init__(self, cfg: Union[ALDMConfig, DictConfig, Mapping[str, Any]]) -> None:
+    def __init__(self, cfg: ALDMConfig | DictConfig | Mapping[str, Any]) -> None:
         super().__init__()
 
         if isinstance(cfg, DictConfig):
@@ -118,7 +119,7 @@ class ALDMModalityTranslator(nn.Module):
             )
 
         self.cfg: ALDMConfig = cfg
-        self.model: Optional[nn.Module] = None
+        self.model: nn.Module | None = None
         self._weights_loaded: bool = False
 
     @staticmethod
@@ -207,8 +208,8 @@ class ALDMModalityTranslator(nn.Module):
         *,
         source: torch.Tensor,
         target_modality: str,
-        ddim_steps: Optional[int] = None,
-        ddim_eta: Optional[float] = None,
+        ddim_steps: int | None = None,
+        ddim_eta: float | None = None,
     ) -> torch.Tensor:
         return self.translate_one(
             source=source,
@@ -223,8 +224,8 @@ class ALDMModalityTranslator(nn.Module):
         *,
         source: torch.Tensor,
         target_modality: str,
-        ddim_steps: Optional[int] = None,
-        ddim_eta: Optional[float] = None,
+        ddim_steps: int | None = None,
+        ddim_eta: float | None = None,
     ) -> torch.Tensor:
         """Translate a source volume to a target modality.
 

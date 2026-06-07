@@ -1,11 +1,10 @@
-import shutil
 import logging
-
+import shutil
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
-import torch
 import pytorch_lightning as pl
+import torch
 from monai.data import MetaTensor
 from monai.transforms import SaveImage
 
@@ -33,7 +32,7 @@ class ExportLatentsModule(StateDictLoaderMixin, pl.LightningModule):
         clamp_min: float = 0.0,
         clamp_max: float = 1.0,
         enable_clamping: bool = False,
-        hparams: Dict[str, Any] = None,  # weight_loads for StateDictLoaderMixin
+        hparams: dict[str, Any] = None,  # weight_loads for StateDictLoaderMixin
     ):
         super().__init__()
         self.save_hyperparameters(hparams, ignore=["autoencoder", "inferer"])
@@ -53,7 +52,7 @@ class ExportLatentsModule(StateDictLoaderMixin, pl.LightningModule):
         self.register_buffer("_sum_sq", torch.zeros([], dtype=torch.float64))
         self.register_buffer("_count",  torch.zeros([], dtype=torch.float64))
 
-    def setup(self, stage: Optional[str] = None) -> None:
+    def setup(self, stage: str | None = None) -> None:
         super().setup(stage)
         self.autoencoder.eval()
         for p in self.autoencoder.parameters():
@@ -87,7 +86,7 @@ class ExportLatentsModule(StateDictLoaderMixin, pl.LightningModule):
 
 
     @torch.no_grad()
-    def predict_step(self, batch: Dict[str, Any], batch_idx: int, dataloader_idx: int = 0):
+    def predict_step(self, batch: dict[str, Any], batch_idx: int, dataloader_idx: int = 0):
         imgs = batch["image"].to(self.device, non_blocking=True)  # MetaTensor list or batch
         recon, z_mu, z_sigma = dynamic_infer(inferer=self.inferer, model=self.autoencoder, images=imgs)
         if self.enable_clamping:
@@ -113,7 +112,9 @@ class ExportLatentsModule(StateDictLoaderMixin, pl.LightningModule):
             def _save_next_to_dst(
                 t: torch.Tensor,
                 postfix: str,
-                meta: Optional[Dict[str, Any]] = None,
+                meta: dict[str, Any] | None = None,
+                dst_abs: Path = dst_abs,
+                dst_dir: Path = dst_dir,
             ) -> None:
                 # Use source name as base, but write in dst_dir; SaveImage uses base from meta filename
                 base_meta = dict(meta) if meta else {}

@@ -1,5 +1,6 @@
 import torch
 
+
 # KL_loss fun taken from Monai Maisi
 def KL_loss(z_mu, z_sigma):
     """

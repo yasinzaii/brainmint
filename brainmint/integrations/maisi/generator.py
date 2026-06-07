@@ -1,13 +1,14 @@
-from __future__ import annotations
-
 """MAISI / NV-Generate-MR generator integration."""
+
+from __future__ import annotations
 
 import json
 import logging
 from argparse import Namespace
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Optional
+from typing import Any
 
 import torch
 from torch import nn
@@ -40,7 +41,7 @@ def normalize_modality(modality: str | int, mapping: Mapping[str, int]) -> int:
     return int(mapping[key])
 
 
-def load_modality_mapping(repo_root: Path, overrides: Optional[Mapping[str, Any]] = None) -> dict[str, int]:
+def load_modality_mapping(repo_root: Path, overrides: Mapping[str, Any] | None = None) -> dict[str, int]:
     """Load NV-Generate-MR modality IDs and apply optional BrainMint overrides."""
 
     raw = json.loads((repo_root / "configs" / "modality_mapping.json").read_text(encoding="utf-8"))
@@ -103,7 +104,7 @@ class MAISISampler(nn.Module):
     def spacing_zyx(self) -> tuple[float, float, float]:
         return tuple(float(value) for value in getattr(self.cfg, "spacing_zyx", (1.0, 1.0, 1.0)))
 
-    def _runtime_device(self, device: Optional[torch.device] = None) -> torch.device:
+    def _runtime_device(self, device: torch.device | None = None) -> torch.device:
         if device is not None:
             return torch.device(device)
         try:
@@ -114,11 +115,11 @@ class MAISISampler(nn.Module):
     @torch.no_grad()
     def sample(
         self,
-        batch: Optional[Mapping[str, Any]] = None,
+        batch: Mapping[str, Any] | None = None,
         *,
         batch_size: int,
-        device: Optional[torch.device] = None,
-        dtype: Optional[torch.dtype] = None,
+        device: torch.device | None = None,
+        dtype: torch.dtype | None = None,
     ) -> torch.Tensor:
         """Generate synthetic volumes as ``(B, 1, Z, Y, X)``."""
 
@@ -182,7 +183,7 @@ class MAISISampler(nn.Module):
         use_autocast = bool(getattr(self.cfg, "autocast", True) and dev.type == "cuda")
 
         with torch.amp.autocast("cuda" if dev.type == "cuda" else "cpu", enabled=use_autocast):
-            for t, next_t in zip(timesteps, next_timesteps):
+            for t, next_t in zip(timesteps, next_timesteps, strict=True):
                 unet_inputs: dict[str, Any] = {
                     "x": image,
                     "timesteps": torch.tensor(
@@ -259,8 +260,8 @@ def build_maisi_sampler(cfg: Any, *, device: torch.device) -> MAISISampler:
         strict = getattr(cfg, "strict", True)
         freeze = bool(getattr(cfg, "freeze", True))
         set_eval = bool(getattr(cfg, "set_eval", True))
-        autoencoder_ckpt_path = str(getattr(cfg, "autoencoder_ckpt_path"))
-        diffusion_ckpt_path = str(getattr(cfg, "diffusion_ckpt_path"))
+        autoencoder_ckpt_path = str(cfg.autoencoder_ckpt_path)
+        diffusion_ckpt_path = str(cfg.diffusion_ckpt_path)
 
         load_module_state_dict(
             autoencoder,

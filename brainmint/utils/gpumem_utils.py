@@ -1,6 +1,7 @@
-import torch
 import logging
-from typing import List, Tuple, Optional
+
+import torch
+
 
 class SimpleGPUMemoryTracker:
     """
@@ -10,11 +11,11 @@ class SimpleGPUMemoryTracker:
     def __init__(
         self,
         device: torch.device,
-        logger: Optional[logging.Logger] = None,
+        logger: logging.Logger | None = None,
     ) -> None:
         self.device = device
         self.logger = logger or logging.getLogger(__name__)
-        self.memory_records: List[Tuple[int, str, float]] = []
+        self.memory_records: list[tuple[int, str, float]] = []
 
         self.reset_peak()
     

@@ -1,12 +1,12 @@
-from __future__ import annotations
-
 """Small volume/tensor utilities for translation wrappers.
 
 These helpers are intentionally tiny so translation wrappers can remain thin
 and mostly delegate to model or integration code.
 """
 
-from typing import Mapping, Optional, Tuple
+from __future__ import annotations
+
+from collections.abc import Mapping
 
 import torch
 
@@ -47,7 +47,7 @@ def ensure_b1hwd(x: torch.Tensor) -> torch.Tensor:
     raise ValueError(f"Expected 3D/4D/5D tensor, got shape {tuple(x.shape)}")
 
 
-def center_crop_or_pad(x: torch.Tensor, target_hwd: Tuple[int, int, int]) -> torch.Tensor:
+def center_crop_or_pad(x: torch.Tensor, target_hwd: tuple[int, int, int]) -> torch.Tensor:
     """Center crop or zero-pad a (B,1,H,W,D) tensor to target (H,W,D)."""
 
     x = ensure_b1hwd(x)
@@ -88,13 +88,13 @@ def center_crop_or_pad(x: torch.Tensor, target_hwd: Tuple[int, int, int]) -> tor
     return x
 
 
-def center_crop_or_pad_hwd(x: torch.Tensor, target_hwd: Tuple[int, int, int]) -> torch.Tensor:
+def center_crop_or_pad_hwd(x: torch.Tensor, target_hwd: tuple[int, int, int]) -> torch.Tensor:
     """Backward-compatible alias."""
 
     return center_crop_or_pad(x, target_hwd)
 
 
-def pick_first_tensor(batch: Mapping[str, object], keys: list[str]) -> Optional[torch.Tensor]:
+def pick_first_tensor(batch: Mapping[str, object], keys: list[str]) -> torch.Tensor | None:
     for k in keys:
         v = batch.get(k)
         if torch.is_tensor(v):

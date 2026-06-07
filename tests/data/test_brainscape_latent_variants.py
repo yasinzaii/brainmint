@@ -1,17 +1,12 @@
 import json
-from pathlib import Path
 import sys
-
-import json
+from pathlib import Path
 
 import numpy as np
-import torch
 import pytest
+import torch
 from hydra import compose, initialize_config_dir
 from hydra.utils import instantiate
-
-from pathlib import Path
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -20,7 +15,8 @@ CONFIG_DIR = PROJECT_ROOT / "tests" / "fixtures" / "configs"
 
 def build_simple_tf():
     import torch
-    from monai.transforms import Compose, LoadImaged, EnsureChannelFirstd, EnsureTyped, Lambdad
+    from monai.transforms import Compose, EnsureChannelFirstd, EnsureTyped, Lambdad, LoadImaged
+
     from brainmint.data.transforms.conditioning import MapModalityToLabeld
     return Compose([
         LoadImaged(keys=["image", "latent"]),

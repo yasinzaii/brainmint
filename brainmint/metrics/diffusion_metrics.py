@@ -21,7 +21,8 @@ Notes:
 
 import math
 from collections import defaultdict
-from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Sequence, Tuple
+from collections.abc import Iterable, Mapping, MutableMapping, Sequence
+from typing import Any
 
 import numpy as np
 import torch
@@ -40,7 +41,7 @@ except ImportError:  # pragma: no cover - exercised only without optional extra
 class DiffusionMetricCalculator:
     """Feature extraction and normalization logic for diffusion metrics."""
 
-    METRIC_NAMES: Tuple[str, ...] = ("fid", "mmd", "ms_ssim")
+    METRIC_NAMES: tuple[str, ...] = ("fid", "mmd", "ms_ssim")
 
     def __init__(
         self,
@@ -63,7 +64,7 @@ class DiffusionMetricCalculator:
         self._mask_eps = float(mask_eps)
 
     @property
-    def metric_names(self) -> Tuple[str, ...]:
+    def metric_names(self) -> tuple[str, ...]:
         return self.METRIC_NAMES
 
     def process_batch(
@@ -71,7 +72,7 @@ class DiffusionMetricCalculator:
         syn: torch.Tensor,
         real: torch.Tensor,
         modalities_batch: Sequence[str],
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Return (real_feats, syn_feats, syn_images)."""
         if syn.shape != real.shape:
             raise ValueError(f"Real and synthetic must match shapes; got {tuple(real.shape)} vs {tuple(syn.shape)}")
@@ -145,7 +146,7 @@ class DiffusionMetricCalculator:
             if len(modalities_batch) != int(x.shape[0]):
                 raise ValueError("Metadata lengths do not match image batch tensors.")
 
-            normalized: List[torch.Tensor] = []
+            normalized: list[torch.Tensor] = []
             for idx, modality in enumerate(modalities_batch):
                 key = str(modality).strip().lower()
                 stats = self._modality_stats.get(key)
@@ -207,12 +208,12 @@ class DiffusionMetricAggregator:
         self._ms_ssim_max_pairs = int(ms_ssim_max_pairs)
         self._ms_ssim_pair_batch_size = int(ms_ssim_pair_batch_size)
 
-        self._real_feats: MutableMapping[str, List[torch.Tensor]] = defaultdict(list)
-        self._syn_feats: MutableMapping[str, List[torch.Tensor]] = defaultdict(list)
-        self._syn_images: MutableMapping[str, List[torch.Tensor]] = defaultdict(list)
+        self._real_feats: MutableMapping[str, list[torch.Tensor]] = defaultdict(list)
+        self._syn_feats: MutableMapping[str, list[torch.Tensor]] = defaultdict(list)
+        self._syn_images: MutableMapping[str, list[torch.Tensor]] = defaultdict(list)
 
         self._counts: MutableMapping[str, int] = defaultdict(int)
-        self._order: List[str] = []
+        self._order: list[str] = []
         self._seen_modalities: set[str] = set()
 
         if modalities is not None:
@@ -280,7 +281,7 @@ class DiffusionMetricAggregator:
             return float("nan")
         return float(np.mean(finite))
 
-    def _stack_feats(self, feats: List[torch.Tensor]) -> torch.Tensor:
+    def _stack_feats(self, feats: list[torch.Tensor]) -> torch.Tensor:
         if not feats:
             return torch.empty((0, 0), dtype=torch.float32)
         x = torch.cat(feats, dim=0)
@@ -291,13 +292,13 @@ class DiffusionMetricAggregator:
         return x
 
     @staticmethod
-    def _stack_images(images: List[torch.Tensor]) -> torch.Tensor:
+    def _stack_images(images: list[torch.Tensor]) -> torch.Tensor:
         if not images:
             raise ValueError("No synthetic images collected; cannot compute MS-SSIM.")
         x = torch.cat(images, dim=0)
         return x
 
-    def _match_counts_for_mmd(self, real: torch.Tensor, syn: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _match_counts_for_mmd(self, real: torch.Tensor, syn: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         n_r = int(real.shape[0])
         n_s = int(syn.shape[0])
         if n_r == n_s:
@@ -485,8 +486,8 @@ class DiffusionMetricAggregator:
         mmd_metric = MMD()
         return float(mmd_metric(fake_feats=syn, real_feats=real).item())
 
-    def summary_rows(self) -> List[Dict[str, Any]]:
-        rows: List[Dict[str, Any]] = []
+    def summary_rows(self) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
 
         seen: set[str] = set()
         for key in self._order:
@@ -530,7 +531,7 @@ class DiffusionMetricAggregator:
             rows.append(overall)
         return rows
 
-    def _compute_weighted_overall(self, rows: Sequence[Mapping[str, Any]]) -> Dict[str, Any] | None:
+    def _compute_weighted_overall(self, rows: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
         """Compute count-weighted overall metrics from per-modality rows (no pooled features)."""
         weights = [int(r.get("count", 0)) for r in rows]
         total = sum(weights)
@@ -539,7 +540,7 @@ class DiffusionMetricAggregator:
 
         def weighted_average(key: str) -> float:
             values = [r.get(key) for r in rows]
-            weighted = [w * float(v) for w, v in zip(weights, values)]
+            weighted = [w * float(v) for w, v in zip(weights, values, strict=True)]
             return float(sum(weighted) / total)
 
         # Overall values are count-weighted averages across modalities, not pooled features.

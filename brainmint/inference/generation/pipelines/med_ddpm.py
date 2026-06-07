@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Optional, Sequence, Set, ClassVar
+from collections.abc import Mapping, Sequence
+from typing import Any, ClassVar
 
 import torch
 
@@ -12,7 +13,7 @@ from brainmint.utils.spatial import center_crop_or_pad_zyx
 class MedDDPMGenerationPipeline(DiffusionPipeline):
     """Generation pipeline for Med-DDPM BraTS mask-conditioned synthesis."""
 
-    required_modules: ClassVar[Set[str]] = {"med_ddpm"}
+    required_modules: ClassVar[set[str]] = {"med_ddpm"}
 
     def __init__(
         self,
@@ -20,9 +21,9 @@ class MedDDPMGenerationPipeline(DiffusionPipeline):
         condition_key: str = "med_ddpm_mask_one_hot",
         modality_key: str = "modality",
         output_size_zyx: Sequence[int] = (144, 192, 192),
-        modality_to_channel: Optional[Mapping[str, int]] = None,
+        modality_to_channel: Mapping[str, int] | None = None,
         normalize_to_01: bool = True,
-        postprocess: Optional[Postprocessor] = None,
+        postprocess: Postprocessor | None = None,
     ) -> None:
         super().__init__()
         self.condition_key = str(condition_key)
@@ -36,7 +37,7 @@ class MedDDPMGenerationPipeline(DiffusionPipeline):
         if modality_to_channel:
             self.modality_to_channel.update({str(key).lower(): int(value) for key, value in modality_to_channel.items()})
 
-    def run(self, batch: Mapping[str, Any], *, ctx: InferenceContext) -> Dict[str, Any]:
+    def run(self, batch: Mapping[str, Any], *, ctx: InferenceContext) -> dict[str, Any]:
         model = ctx.get("med_ddpm", required=True)
         if self.condition_key not in batch:
             raise KeyError(f"Batch missing condition_key='{self.condition_key}'.")

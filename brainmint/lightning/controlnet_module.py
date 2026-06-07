@@ -24,20 +24,19 @@ import contextlib
 import functools
 import logging
 import warnings
-from typing import Any, Dict, Optional, Sequence, Union, Tuple, List
+from collections.abc import Sequence
+from typing import Any
 
+import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-import pytorch_lightning as pl
-
+from monai.networks.schedulers import DDPMScheduler, RFlowScheduler
 from monai.networks.schedulers.ddpm import DDPMPredictionType
-from monai.networks.schedulers import RFlowScheduler, DDPMScheduler
+from omegaconf import OmegaConf
 
+from brainmint.utils.ema import EMAConfig, ExponentialMovingAverage
 from brainmint.utils.gpumem_utils import SimpleGPUMemoryTracker
 from brainmint.utils.state_dict_loader import StateDictLoaderMixin
-from brainmint.utils.ema import EMAConfig, ExponentialMovingAverage
-
-from omegaconf import OmegaConf
 
 _LOG = logging.getLogger(__name__)
 
@@ -74,14 +73,14 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
 
     def __init__(
         self,
-        autoencoder: Optional[nn.Module],
+        autoencoder: nn.Module | None,
         diffusion_unet: nn.Module,
         controlnet: nn.Module,
         noise_scheduler,
-        hparams: Dict[str, Any],
+        hparams: dict[str, Any],
         optimizer,
         polylr=None,
-        demographics_encoder: Optional[nn.Module] = None,
+        demographics_encoder: nn.Module | None = None,
     ) -> None:
         super().__init__()
         hp_plain = _to_plain(hparams)
@@ -123,7 +122,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
         self.latent_source = latent_source
         # Target latent key (preferred). If omitted, fall back to legacy `input_key` behavior.
         _tk = str(hp.get("target_key", "")).strip()
-        self.target_key: Optional[str] = _tk if _tk else None
+        self.target_key: str | None = _tk if _tk else None
         self.input_key = str(hp.get("input_key", "latent"))
         self.use_modality_mapping = bool(hp.get("use_modality_mapping", True))
         self.modality_map = {str(k): int(v) for k, v in hp.get("modality_map", {}).items()}
@@ -165,7 +164,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
         self._ema_use_for_sampling = bool(ema_cfg.get("use_for_sampling", True))
         self._ema_last_step: int = -1
         self._ema_loaded: bool = False
-        self.ema: Optional[ExponentialMovingAverage] = None
+        self.ema: ExponentialMovingAverage | None = None
         if self._ema_enabled:
             cfg = EMAConfig(
                 decay=float(ema_cfg.get("decay", 0.9999)),
@@ -201,11 +200,11 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
         self.register_buffer("_val_ema_count", torch.tensor(0, dtype=torch.long), persistent=False)
 
         # Memory trackers
-        self.train_memory_tracker: Optional[SimpleGPUMemoryTracker] = None
-        self.val_memory_tracker: Optional[SimpleGPUMemoryTracker] = None
+        self.train_memory_tracker: SimpleGPUMemoryTracker | None = None
+        self.val_memory_tracker: SimpleGPUMemoryTracker | None = None
 
         # Total steps (populated in setup)
-        self._total_steps: Optional[int] = None
+        self._total_steps: int | None = None
         self._lr_scheduler = None
 
         # ------------------------------------------------------------
@@ -218,17 +217,17 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
         hp = self.hparams
         self._obs_sampling_enabled: bool = bool(hp.get("log_observed_sampling", True))
         self._obs_sampling_strict: bool = bool(hp.get("observed_sampling_strict", True))
-        self._obs_bucket_names: Optional[List[str]] = None
-        self._obs_bucket_name_to_idx: Optional[Dict[str, int]] = None
-        self._obs_modality_names: List[str] = [
+        self._obs_bucket_names: list[str] | None = None
+        self._obs_bucket_name_to_idx: dict[str, int] | None = None
+        self._obs_modality_names: list[str] = [
             str(m).strip().lower()
             for m in (hp.get("observed_sampling_modality_order", ["t1w", "t2w", "flair", "t1ce"]) or [])
         ]
         self._obs_log_val: bool = bool(hp.get("log_observed_sampling_val", True))
-        self._obs_bucket_counts_train: Optional[torch.Tensor] = None
-        self._obs_syn_sum_train: Optional[torch.Tensor] = None
-        self._obs_bucket_counts_val: Optional[torch.Tensor] = None
-        self._obs_syn_sum_val: Optional[torch.Tensor] = None
+        self._obs_bucket_counts_train: torch.Tensor | None = None
+        self._obs_syn_sum_train: torch.Tensor | None = None
+        self._obs_bucket_counts_val: torch.Tensor | None = None
+        self._obs_syn_sum_val: torch.Tensor | None = None
 
 
     # EMA helpers (mirrors DiffusionModule)
@@ -275,7 +274,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
             return f"{getattr(func, '__module__', '')}.{getattr(func, '__name__', func.__class__.__name__)}"
         return str(type(opt))
 
-    def _build_param_groups(self, modules: List[Tuple[str, nn.Module]], weight_decay: float):
+    def _build_param_groups(self, modules: list[tuple[str, nn.Module]], weight_decay: float):
         """
         Create two param groups:
         - decay: params that get weight decay
@@ -334,7 +333,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
             groups.append({"params": no_decay_params, "weight_decay": 0.0})
         return groups
 
-    def _log_learning_rates(self, when: str, opt: Optional[torch.optim.Optimizer] = None) -> None:
+    def _log_learning_rates(self, when: str, opt: torch.optim.Optimizer | None = None) -> None:
         optimizers = []
         if opt is not None:
             optimizers = [opt]
@@ -387,7 +386,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
         # Stored as a persistent buffer for correct checkpointing / device moves.
         return self._scale_factor.to(device=z.device, dtype=z.dtype)
 
-    def _compute_z(self, batch: Dict[str, Any]) -> torch.Tensor:
+    def _compute_z(self, batch: dict[str, Any]) -> torch.Tensor:
         """
         Extract the latent tensor to denoise.
 
@@ -428,13 +427,13 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
 
         return z * self._get_scale_factor(z)
 
-    def _apply_noise(self, z: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def _apply_noise(self, z: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """ Sample timesteps and add noise to latents using the scheduler. """
         noise = torch.randn_like(z)
         if isinstance(self.noise_scheduler, RFlowScheduler):
             timesteps = self.noise_scheduler.sample_timesteps(z)
         else:
-            num_tr = int(getattr(self.noise_scheduler, "num_train_timesteps"))
+            num_tr = int(self.noise_scheduler.num_train_timesteps)
             timesteps = torch.randint(0, num_tr, (z.shape[0],), device=z.device).long()
 
         z_noisy = self.noise_scheduler.add_noise(original_samples=z, noise=noise, timesteps=timesteps)
@@ -460,10 +459,10 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
             raise TypeError(f"V_PREDICTION unsupported for {type(self.noise_scheduler).__name__}")
         raise ValueError(f"Unknown prediction type: {pred_type}")
 
-    def compute_loss(self, pred: torch.Tensor, target: torch.Tensor, batch: Dict[str, Any]) -> torch.Tensor:
+    def compute_loss(self, pred: torch.Tensor, target: torch.Tensor, batch: dict[str, Any]) -> torch.Tensor:
         return self.criterion(pred.float(), target.float())
 
-    def _prep_condition_tensors(self, batch: Dict[str, Any]) -> Dict[str, torch.Tensor]:
+    def _prep_condition_tensors(self, batch: dict[str, Any]) -> dict[str, torch.Tensor]:
         if getattr(self.unet, "num_class_embeds", 0):
             if "modality_map" not in batch or not torch.is_tensor(batch["modality_map"]):
                 raise ValueError("Missing 'modality_map' in batch; ensure conditioning transform is enabled")
@@ -472,7 +471,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
             # Passing class labels enforced for now (will be removed)
             raise KeyError("Missing 'class_labels' for class-conditioned sampling")
 
-    def _encode_demographics(self, batch: Dict[str, Any]) -> Optional[torch.Tensor]:
+    def _encode_demographics(self, batch: dict[str, Any]) -> torch.Tensor | None:
         """Encode demographics for UNet conditioning, mirroring DiffusionModule.
 
         This is *not* passed into ControlNet: the ControlNet branch is kept generic
@@ -508,7 +507,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
             raise ValueError("Batch size mismatch in demographics embedding")
         return dem_emb
 
-    def _get_is_mod_synthetic(self, batch: Dict[str, Any]) -> Optional[torch.Tensor]:
+    def _get_is_mod_synthetic(self, batch: dict[str, Any]) -> torch.Tensor | None:
         """Return per-sample synthetic-modality flags (B, K) if present."""
         if self.is_mod_synthetic_key and self.is_mod_synthetic_key in batch:
             v = batch[self.is_mod_synthetic_key]
@@ -516,7 +515,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
                 return v.to(self.device, non_blocking=True).float()
         raise KeyError("Missing key 'is_mod_synthetic' from batch")
 
-    def _prep_controlnet_cond(self, batch: Dict[str, Any]) -> torch.Tensor:
+    def _prep_controlnet_cond(self, batch: dict[str, Any]) -> torch.Tensor:
         """Build the conditioning tensor passed to ControlNet.
 
         Generic path (preferred):
@@ -544,13 +543,13 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
         raise KeyError("Missing ControlNet conditioning.")
 
 
-    def setup(self, stage: Optional[str] = None) -> None:
+    def setup(self, stage: str | None = None) -> None:
         if hasattr(super(), "setup"):
             super().setup(stage)  # Lightning setup()
 
         # Warn if VAE is not loaded
         if self.autoencoder is None:
-            warnings.warn("No autoencoder provided - latents will pass through during decode")
+            warnings.warn("No autoencoder provided - latents will pass through during decode", stacklevel=2)
         else:
             has_ae_spec = any(s.get("target") == "autoencoder" for s in self.hparams.get("weight_loads", []))
             if has_ae_spec and "autoencoder" not in self.get_loaded_models():
@@ -558,7 +557,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
 
         # Warn if Diffusion UNET is not loaded
         if self.unet is None:
-            warnings.warn("No diffusion UNET provided - please provide trained UNET weights")
+            warnings.warn("No diffusion UNET provided - please provide trained UNET weights", stacklevel=2)
         else:
             has_unet_spec = any(s.get("target") == "unet" for s in self.hparams.get("weight_loads", []))
             if has_unet_spec and "unet" not in self.get_loaded_models():
@@ -636,7 +635,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
 
 
 
-    def training_step(self, batch: Dict[str, Any], batch_idx: int):
+    def training_step(self, batch: dict[str, Any], batch_idx: int):
         z = self._compute_z(batch)  # Compute latents
         bs = z.size(0)
         timesteps, noise, z_noisy = self._apply_noise(z)
@@ -677,7 +676,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
         )
 
         # UNet forward
-        unet_inputs: Dict[str, Any] = {
+        unet_inputs: dict[str, Any] = {
             "x": z_noisy,
             "timesteps": timesteps,
             "down_block_additional_residuals": down_samples,
@@ -715,7 +714,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
         
         return loss
 
-    def validation_step(self, batch: Dict[str, Any], batch_idx: int):
+    def validation_step(self, batch: dict[str, Any], batch_idx: int):
         z = self._compute_z(batch)
         bs = z.size(0)
         timesteps, noise, z_noisy = self._apply_noise(z)
@@ -957,7 +956,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
         syn.zero_()
 
     @torch.no_grad()
-    def _accumulate_observed_sampling(self, batch: Dict[str, Any], *, stage: str = "train") -> None:
+    def _accumulate_observed_sampling(self, batch: dict[str, Any], *, stage: str = "train") -> None:
         """Accumulate empirical bucket frequencies and synthetic selection rates."""
         if not self._obs_sampling_enabled:
             return
@@ -1108,7 +1107,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
 
         if self.trainer.is_global_zero:
             header = "bucket	count	prob	" + "	".join([f"p_syn({m})" for m in self._obs_modality_names])
-            print("[ObservedSampling:%s] epoch=%d" % (st, int(self.current_epoch)))
+            print(f"[ObservedSampling:{st}] epoch={int(self.current_epoch)}")
             print(header)
             for i, b in enumerate(self._obs_bucket_names):
                 row = [
@@ -1160,12 +1159,12 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
     @torch.no_grad()
     def sample_latent_controlled(
         self,
-        output_size: Tuple[int, int, int],  # (Z, Y, X)
+        output_size: tuple[int, int, int],  # (Z, Y, X)
         ctrl: torch.Tensor,                 # (B, C_ctrl, Z, Y, X)  e.g., cat(image_masked, mask_one_hot) to match training
-        class_labels: Optional[torch.Tensor] = None,
-        demographics_embedding: Optional[torch.Tensor] = None,
-        is_mod_synthetic: Optional[torch.Tensor] = None,
-        num_inference_steps: Optional[int] = None,
+        class_labels: torch.Tensor | None = None,
+        demographics_embedding: torch.Tensor | None = None,
+        is_mod_synthetic: torch.Tensor | None = None,
+        num_inference_steps: int | None = None,
     ) -> torch.Tensor:
         """
         DDPM/RFlow sampling loop with ControlNet residual injection.
@@ -1192,7 +1191,8 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
             if isinstance(self.noise_scheduler, DDPMScheduler) and steps < self.noise_scheduler.num_train_timesteps:
                 warnings.warn(
                     "* WARNING: Using DDPMScheduler with num_inference_steps "
-                    f"{steps} < num_train_timesteps={self.noise_scheduler.num_train_timesteps}"
+                    f"{steps} < num_train_timesteps={self.noise_scheduler.num_train_timesteps}",
+                    stacklevel=2,
                 )
 
         # Checks
@@ -1212,7 +1212,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
                 t_batch = torch.full((b,), t_val, device=device, dtype=all_t.dtype)
 
                 # ControlNet forward
-                cn_kwargs: Dict[str, Any] = {
+                cn_kwargs: dict[str, Any] = {
                     "x": img,
                     "timesteps": t_batch,
                     "controlnet_cond": ctrl,
@@ -1227,7 +1227,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
                 down_res, mid_res = self.controlnet(**cn_kwargs)
 
                 # UNet forward with residuals
-                unet_kwargs: Dict[str, Any] = {
+                unet_kwargs: dict[str, Any] = {
                     "x": img,
                     "timesteps": t_batch,
                     "down_block_additional_residuals": down_res,
@@ -1252,12 +1252,12 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
     def _run_inference(
         self,
         x: torch.Tensor,                      # only used for spatial size
-        class_labels: Optional[torch.Tensor], # mapped and on device (or None)
+        class_labels: torch.Tensor | None, # mapped and on device (or None)
         ctrl: torch.Tensor,                   # concatenated control: matches training channel order
-        demographics_embedding: Optional[torch.Tensor] = None,
-        is_mod_synthetic: Optional[torch.Tensor] = None,
-        num_inference_steps: Optional[int] = None,
-    ) -> Dict[str, torch.Tensor]:
+        demographics_embedding: torch.Tensor | None = None,
+        is_mod_synthetic: torch.Tensor | None = None,
+        num_inference_steps: int | None = None,
+    ) -> dict[str, torch.Tensor]:
         """
         Generate a *new* sample using ControlNet-guided sampling.
         """
@@ -1283,15 +1283,15 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
     def run_inference(
         self,
         x: torch.Tensor,
-        class_labels: Union[torch.Tensor, int, str] = None,
-        mask_one_hot: Optional[torch.Tensor] = None,
-        image_masked: Optional[torch.Tensor] = None,
-        controlnet_cond: Optional[torch.Tensor] = None,
-        num_inference_steps: Optional[int] = None,
-    ) -> Dict[str, torch.Tensor]:
+        class_labels: torch.Tensor | int | str = None,
+        mask_one_hot: torch.Tensor | None = None,
+        image_masked: torch.Tensor | None = None,
+        controlnet_cond: torch.Tensor | None = None,
+        num_inference_steps: int | None = None,
+    ) -> dict[str, torch.Tensor]:
         """Public wrapper used by external callers (now supports control tensors)."""
         # Labels mapping (unchanged)
-        labels: Optional[torch.Tensor]
+        labels: torch.Tensor | None
         if class_labels is None or isinstance(class_labels, torch.Tensor):
             labels = class_labels
         else:
@@ -1327,7 +1327,7 @@ class ControlNetModule(StateDictLoaderMixin, pl.LightningModule):
         return self._run_inference(x, class_labels=labels, ctrl=controlnet_cond, num_inference_steps=num_inference_steps)
 
     @torch.no_grad()
-    def run_inference_bs(self, kwargs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def run_inference_bs(self, kwargs: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         """Batch-style inference wrapper used by ``SaveMRIImages``.
 
         This keeps backward compatibility with the old segmentation use-case

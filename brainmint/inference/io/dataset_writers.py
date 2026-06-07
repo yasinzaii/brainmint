@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Union
+from typing import Any
 
 import numpy as np
 import torch
@@ -33,8 +34,8 @@ class SyntheticDatasetWriter:
     def __init__(
         self,
         *,
-        out_dir: Union[str, Path],
-        json_path: Union[str, Path],
+        out_dir: str | Path,
+        json_path: str | Path,
         image_key: str = "image",
         filename_template: str = "{index:06d}.nii.gz",
         start_index: int = 0,
@@ -46,7 +47,7 @@ class SyntheticDatasetWriter:
         self.image_key = str(image_key)
         self.filename_template = str(filename_template)
         self._index = int(start_index)
-        self._records: List[Dict[str, Any]] = []
+        self._records: list[dict[str, Any]] = []
         self._json_indent = int(json_indent)
 
     @staticmethod
@@ -80,9 +81,9 @@ class SyntheticDatasetWriter:
         self,
         *,
         sample: torch.Tensor,
-        meta: Optional[Mapping[str, Any]] = None,
-        affine: Optional[np.ndarray] = None,
-    ) -> List[Dict[str, Any]]:
+        meta: Mapping[str, Any] | None = None,
+        affine: np.ndarray | None = None,
+    ) -> list[dict[str, Any]]:
         """Write sample(s) and return the appended JSON records."""
         nib = self._require_nibabel()
         meta = dict(meta or {})
@@ -97,7 +98,7 @@ class SyntheticDatasetWriter:
         else:
             items = [sample]
 
-        records: List[Dict[str, Any]] = []
+        records: list[dict[str, Any]] = []
         for item in items:
             filename = self.filename_template.format(index=self._index)
             path = self.out_dir / filename
@@ -121,5 +122,5 @@ class SyntheticDatasetWriter:
             json.dump(self._records, f, indent=self._json_indent)
 
     @property
-    def records(self) -> List[Dict[str, Any]]:
+    def records(self) -> list[dict[str, Any]]:
         return list(self._records)

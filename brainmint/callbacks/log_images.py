@@ -1,13 +1,14 @@
+import contextlib
 import gc
 import logging
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Callable, Union
+from typing import Any
 
-import torch
-import contextlib
 import pytorch_lightning as pl
-from monai.transforms import SaveImage
+import torch
 from monai.data import MetaTensor
+from monai.transforms import SaveImage
 
 _LOG = logging.getLogger(__name__)
 
@@ -38,19 +39,19 @@ class SaveMRIImages(pl.Callback):
         modalities: Sequence[str] = ("T1w", "T2w", "T1ce", "FLAIR"),
         tag: str = "val",
         subdir: str = "val_samples",
-        dirpath: Optional[str] = None,  # Defaults to trainer.log_dir
+        dirpath: str | None = None,  # Defaults to trainer.log_dir
         infer_kwarg_keys: Sequence[str] = ("image",),  # Batch keys to pass to inference
         infer_method_candidates: Sequence[str] = ("_run_inference",),
         fallback_to_forward: bool = True,
         output_names: Sequence[str] = ("output", "z_mu", "z_sigma"),  # Names for outputs, matching the order the model returns.
-        save_outputs: Sequence[Union[int, bool, str]] = (1, 0, 0),  # Output to save, Boolean Mask | Indices | Output Names
-        input_save_list: Optional[Sequence[str]] = None,
+        save_outputs: Sequence[int | bool | str] = (1, 0, 0),  # Output to save, Boolean Mask | Indices | Output Names
+        input_save_list: Sequence[str] | None = None,
         save_dtype: torch.dtype = torch.float32,
         clamp_min: float = 0.0,
         clamp_max: float = 1.0,
-        output_activation: Optional[str] = None,
+        output_activation: str | None = None,
         separate_folder: bool = False,
-        dataset_module: Optional[Any] = None,
+        dataset_module: Any | None = None,
         
         
     ) -> None:
@@ -79,7 +80,7 @@ class SaveMRIImages(pl.Callback):
         self.dataset_module = dataset_module
 
     @staticmethod
-    def _normalize_save_selector(selector: Sequence[Union[int, bool, str]], names: Sequence[str]) -> List[int]:
+    def _normalize_save_selector(selector: Sequence[int | bool | str], names: Sequence[str]) -> list[int]:
         """Normalize save_outputs → sorted unique indices."""
         n = len(names)
         lower_names = {nm.lower() for nm in names}
@@ -97,7 +98,7 @@ class SaveMRIImages(pl.Callback):
             return sorted(set(selector))
 
         is_names = len(selector) <= n and all(isinstance(x, str) and x.lower() in lower_names for x in selector)
-        idxs: List[int] = []
+        idxs: list[int] = []
         if is_names:
             for s in selector:
                 j = name_map.get(s.lower())
@@ -108,7 +109,7 @@ class SaveMRIImages(pl.Callback):
             _LOG.error(f"SaveMRIImages Callback - Invalid output selector after filtering: {selector}")
         return sorted(set(idxs))
 
-    def _resolve_infer_fn(self, pl_module: pl.LightningModule) -> Optional[Callable]:
+    def _resolve_infer_fn(self, pl_module: pl.LightningModule) -> Callable | None:
         for name in self.infer_method_candidates:
             fn = getattr(pl_module, name, None)
             if callable(fn):
@@ -136,14 +137,14 @@ class SaveMRIImages(pl.Callback):
     def _build_infer_kwargs(
         self,
         pl_module: pl.LightningModule,
-        batch: Dict[str, Any],
+        batch: dict[str, Any],
         batch_size: int,
         i: int,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Build kwargs from configured keys; first entry is treated as input."""
         if not self.infer_kwarg_keys:
             return {}
-        kwargs: Dict[str, Any] = {}
+        kwargs: dict[str, Any] = {}
         for k in self.infer_kwarg_keys:
             if k in batch:
                 v = self._slice_like_batch(batch[k], batch_size, i)
@@ -172,7 +173,8 @@ class SaveMRIImages(pl.Callback):
         if self.dataset_module is not None:
             dm = self.dataset_module
             try:
-                if hasattr(dm, "setup"): dm.setup()
+                if hasattr(dm, "setup"):
+                    dm.setup()
             except Exception as e:
                 _LOG.warning(f"... prepare/setup custom dataset module: {e}")
             if dm is None:
@@ -271,7 +273,7 @@ class SaveMRIImages(pl.Callback):
                         raise ValueError(f"SaveMRIImages - Input dimension error, Length of 1st Dim should be 1. Got:{inp.shape} ")
                     inp_vol = inp[0].detach().to(dtype=self.save_dtype).clamp(self.clamp_min, self.clamp_max).cpu()
                     if not isinstance(inp_vol, MetaTensor):
-                        inp_vol = MetaTensor(inp_vol, meta={"filename_or_obj": f"_.nii.gz"})
+                        inp_vol = MetaTensor(inp_vol, meta={"filename_or_obj": "_.nii.gz"})
                     input_saver = SaveImage(
                         output_dir=str(epoch_dir),
                         output_postfix=f"{self.tag}_{mod_label}_input_{inp_name}",

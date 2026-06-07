@@ -1,21 +1,20 @@
 # BrainScapeDataModule: Builds and returns train/val/test DataLoaders for the BrainScape MRI dataset.
 
 import json
-import random
 import logging
+import random
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any
 
-import torch
 import pytorch_lightning as pl
-
+import torch
 from monai.data import CacheDataset, DataLoader
-from torch.utils.data import WeightedRandomSampler
 from monai.transforms import Compose
+from torch.utils.data import WeightedRandomSampler
 
 _LOG = logging.getLogger(__name__)
 
-def _load_json_split(json_path: Path | str, split: str) -> List[Dict[str, Any]]:
+def _load_json_split(json_path: Path | str, split: str) -> list[dict[str, Any]]:
     """Return list[dict] for the requested split (train|val|test) name."""
     json_path = Path(json_path)
     with json_path.open("r") as fp:
@@ -27,11 +26,11 @@ def _load_json_split(json_path: Path | str, split: str) -> List[Dict[str, Any]]:
 
 
 def _build_datalist(
-    entries: List[Dict[str, Any]],
-    specs: Tuple[Dict[str, Any], ...],
-    modalities: Tuple[str, ...],
-    dataset_filter: Optional[Tuple[str, ...]] = None,
-) -> List[Dict[str, Any]]:
+    entries: list[dict[str, Any]],
+    specs: tuple[dict[str, Any], ...],
+    modalities: tuple[str, ...],
+    dataset_filter: tuple[str, ...] | None = None,
+) -> list[dict[str, Any]]:
     """Flatten JSON records into sample dictionaries.
 
     Each spec describes one tensor to load, with:
@@ -43,7 +42,7 @@ def _build_datalist(
     If dataset_filter is set, only records whose dataset ID matches are used.
     """
 
-    items: List[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
     if not modalities:
         raise RuntimeError("'modalities' must be provided")
 
@@ -56,7 +55,7 @@ def _build_datalist(
             continue
 
         for mod in mods:
-            sample: Dict[str, Any] = {
+            sample: dict[str, Any] = {
                 "dataset": dataset_id,
                 "modality": mod,
                 "subject": rec.get("subject"),
@@ -133,24 +132,24 @@ class BrainScapeDataModule(pl.LightningDataModule):
         self,
         json_path: str | Path,
         dataset_root: str | Path,
-        train_tf: Optional[Compose] = None,
-        val_tf: Optional[Compose] = None,
-        test_tf: Optional[Compose] = None,
+        train_tf: Compose | None = None,
+        val_tf: Compose | None = None,
+        test_tf: Compose | None = None,
         batch_size: int = 1,
-        val_batch_size: Optional[int] = None,
-        test_batch_size: Optional[int] = None,
+        val_batch_size: int | None = None,
+        test_batch_size: int | None = None,
         cache_rate: float = 1,
         num_workers: int = 4,
         prefetch_factor: int = 2,
-        subset_frac: Optional[float] = None,
+        subset_frac: float | None = None,
         seed: int = 42,
         pin_memory: bool = True,
         persistent_workers: bool = True,
-        input_specs: Optional[List[Dict[str, Any]]] = None,
-        modalities: List[str] | Tuple[str, ...] = ("t1w", "t2w", "t1ce", "flair"), 
+        input_specs: list[dict[str, Any]] | None = None,
+        modalities: list[str] | tuple[str, ...] = ("t1w", "t2w", "t1ce", "flair"), 
         use_modality_sampler: bool = False, # WeightedRandomSampler
         modality_sampler_alpha: float = 0.7,
-        dataset_filter: Optional[Tuple[str, ...]] = None,
+        dataset_filter: tuple[str, ...] | None = None,
     ) -> None:
         super().__init__()
         self.save_hyperparameters()
@@ -196,7 +195,7 @@ class BrainScapeDataModule(pl.LightningDataModule):
             "test":test_batch_size or batch_size,
         }
 
-        self._datasets: Dict[str, CacheDataset] = {}
+        self._datasets: dict[str, CacheDataset] = {}
         self.generator = torch.Generator().manual_seed(seed)
         self.dataset_filter = tuple(str(d) for d in dataset_filter) if dataset_filter else None
 
@@ -322,7 +321,7 @@ class BrainScapeDataModule(pl.LightningDataModule):
         return self._make_loader("test",  shuffle=False)
 
     
-    def get_splits_length(self) -> Dict[str, int]:
+    def get_splits_length(self) -> dict[str, int]:
         """Get the total number of samples for all dataset splits."""
         return {split: len(dataset) for split, dataset in self._datasets.items()}
 

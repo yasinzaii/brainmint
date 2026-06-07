@@ -1,11 +1,12 @@
-from __future__ import annotations
-
 """BraSyn / BrainLesion MissingMRI tensor translation wrappers."""
+
+from __future__ import annotations
 
 import logging
 import tempfile
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional, Sequence
+from typing import Any
 
 import torch
 
@@ -37,9 +38,9 @@ class BraSynMissingMRIGenerator:
         algorithm: str,
         backend: str = "singularity",
         cuda_devices: str = "0",
-        runtime: Optional[dict[str, Any] | BraSynRuntime] = None,
+        runtime: dict[str, Any] | BraSynRuntime | None = None,
         reference_modality: str = "t1w",
-        out_hwd: Optional[Sequence[int]] = None,
+        out_hwd: Sequence[int] | None = None,
         brats_hwd: Sequence[int] = (240, 240, 155),
     ) -> None:
         _ensure_brats_installed()
@@ -128,7 +129,7 @@ class BraSynMissingMRIGenerator:
             zero_path = tmp_path / "zero.nii.gz"
             _create_zero(self.brats_hwd, zero_path, affine=affine)
 
-            cond_paths: Dict[str, str] = {}
+            cond_paths: dict[str, str] = {}
             for gm_mod, br_key in GM_TO_BRAKEY.items():
                 if gm_mod == target:
                     continue

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """BraSyn / BrainLesion MissingMRI runtime helpers.
 
 This module owns the HPC-specific BraSyn runtime behavior. The upstream
@@ -9,6 +7,8 @@ overlays land in configured scratch/cache locations instead of transient node
 ``/tmp`` paths.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import shlex
@@ -17,7 +17,7 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 _LOG = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ def _ensure_brats_installed() -> None:
         ) from exc
 
 
-def _resolve_container_cli(preferred: Optional[str] = None) -> str:
+def _resolve_container_cli(preferred: str | None = None) -> str:
     """Return the first available Apptainer/Singularity binary."""
 
     candidates: list[str] = []
@@ -82,7 +82,7 @@ def _run_singularity_cmd(cmd: list[str]) -> list[str]:
     return output_lines
 
 
-def resolve_tmp_root(cfg_value: Optional[str | Path] = None) -> Path:
+def resolve_tmp_root(cfg_value: str | Path | None = None) -> Path:
     """Resolve the host temporary root for BraSyn container execution."""
 
     if cfg_value is not None:
@@ -96,7 +96,7 @@ def resolve_tmp_root(cfg_value: Optional[str | Path] = None) -> Path:
     return Path(tempfile.gettempdir()).resolve()
 
 
-def resolve_singularity_image_dir(cfg_value: Optional[str | Path] = None) -> Optional[Path]:
+def resolve_singularity_image_dir(cfg_value: str | Path | None = None) -> Path | None:
     """Resolve the persistent Singularity/Apptainer image cache directory."""
 
     if cfg_value is not None:
@@ -112,13 +112,13 @@ def resolve_singularity_image_dir(cfg_value: Optional[str | Path] = None) -> Opt
 
 @dataclass
 class BraSynRuntime:
-    tmp_root: Optional[str] = None
+    tmp_root: str | None = None
     overlay_mode: str = "tmpfs"  # tmpfs | overlay | none
     overlay_size_mb: int = 256
     overlay_readonly: bool = True
     keep_overlay: bool = True
     use_fakeroot: bool = False
-    singularity_image_dir: Optional[str] = None
+    singularity_image_dir: str | None = None
 
 
 def _patch_brats_singularity_runner(runtime: BraSynRuntime) -> None:
@@ -177,9 +177,9 @@ def _patch_brats_singularity_runner(runtime: BraSynRuntime) -> None:
         brats_singularity._ensure_image = _ensure_image_patched  # type: ignore[assignment]
 
     try:
+        import brats.core.docker as brats_docker
         from brats import constants as brats_constants
         from brats.utils import zenodo as brats_zenodo
-        import brats.core.docker as brats_docker
 
         if runtime.singularity_image_dir:
             add_root = Path(runtime.singularity_image_dir) / "brats_additional_files"
@@ -189,7 +189,7 @@ def _patch_brats_singularity_runner(runtime: BraSynRuntime) -> None:
             brats_zenodo.ADDITIONAL_FILES_FOLDER = add_root
 
             original_check = brats_zenodo.check_additional_files_path
-            memo: Dict[str, Path] = {}
+            memo: dict[str, Path] = {}
 
             def check_additional_files_path_local_first(record_id: str) -> Path:
                 if record_id in memo:
@@ -224,7 +224,7 @@ def _patch_brats_singularity_runner(runtime: BraSynRuntime) -> None:
         output_path: Path,
         cuda_devices: str,
         force_cpu: bool,
-        internal_external_name_map: Optional[Dict[str, str]] = None,
+        internal_external_name_map: dict[str, str] | None = None,
         overlay_size: int = 1024,
     ) -> None:
         """Drop-in replacement for ``brats.core.singularity.run_container``."""
@@ -235,12 +235,12 @@ def _patch_brats_singularity_runner(runtime: BraSynRuntime) -> None:
         if overlay_size <= 0:
             raise ValueError("Overlay size must be greater than 0.")
 
-        get_additional_files_path = getattr(brats_singularity, "_get_additional_files_path")
-        get_volume_mappings_mlcube = getattr(brats_singularity, "_get_volume_mappings_mlcube")
-        get_volume_mappings_docker_only = getattr(brats_singularity, "_get_volume_mappings_docker_only")
-        handle_device_requests = getattr(brats_singularity, "_handle_device_requests")
-        sanity_check_output = getattr(brats_singularity, "_sanity_check_output")
-        parameters_dir = getattr(brats_singularity, "PARAMETERS_DIR")
+        get_additional_files_path = brats_singularity._get_additional_files_path
+        get_volume_mappings_mlcube = brats_singularity._get_volume_mappings_mlcube
+        get_volume_mappings_docker_only = brats_singularity._get_volume_mappings_docker_only
+        handle_device_requests = brats_singularity._handle_device_requests
+        sanity_check_output = brats_singularity._sanity_check_output
+        parameters_dir = brats_singularity.PARAMETERS_DIR
         time_mod = __import__("time")
 
         image = brats_singularity._ensure_image(image=algorithm.run_args.docker_image)  # type: ignore[misc]
@@ -285,7 +285,7 @@ def _patch_brats_singularity_runner(runtime: BraSynRuntime) -> None:
                 "Docker working directory not found. Using default working directory."
             )
 
-        overlay_path: Optional[Path] = None
+        overlay_path: Path | None = None
         overlay_created = False
         if overlay_mode == "tmpfs":
             options.append("--writable-tmpfs")
@@ -344,4 +344,4 @@ def _patch_brats_singularity_runner(runtime: BraSynRuntime) -> None:
     except Exception as exc:
         _LOG.debug("Could not patch brats_algorithm Singularity runner: %s", exc)
 
-    setattr(brats_singularity, "__brainmint_patched__", True)
+    brats_singularity.__brainmint_patched__ = True

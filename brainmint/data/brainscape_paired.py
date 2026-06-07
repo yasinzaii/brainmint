@@ -45,22 +45,21 @@ from __future__ import annotations
 import json
 import logging
 import random
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any
 
-import torch
 import pytorch_lightning as pl
+import torch
 from monai.data import CacheDataset, DataLoader
+from omegaconf import ListConfig, OmegaConf
 from torch.utils.data import WeightedRandomSampler
-
-from omegaconf import OmegaConf, ListConfig
-
 
 logger = logging.getLogger(__name__)
 
 
-def _as_list(x: Any) -> List[str]:
+def _as_list(x: Any) -> list[str]:
     if x is None:
         return []
     if isinstance(x, (list, tuple, ListConfig)):
@@ -68,7 +67,7 @@ def _as_list(x: Any) -> List[str]:
     return [str(x)]
 
 
-def _load_json_split(json_path: Path, split: str) -> List[Dict[str, Any]]:
+def _load_json_split(json_path: Path, split: str) -> list[dict[str, Any]]:
     with json_path.open("r") as f:
         data = json.load(f)
     if split not in data:
@@ -82,13 +81,13 @@ def _load_json_split(json_path: Path, split: str) -> List[Dict[str, Any]]:
 class InputSpec:
     key: str
     group: str
-    modalities: Tuple[str, ...]
-    dataset_root: Optional[Path] = None
+    modalities: tuple[str, ...]
+    dataset_root: Path | None = None
     subdir: str = "preprocessed"
     seg_map: bool = False
 
     @staticmethod
-    def from_dict(d: Mapping[str, Any]) -> "InputSpec":
+    def from_dict(d: Mapping[str, Any]) -> InputSpec:
         key = str(d["key"])
         group = str(d["group"])
         mods = tuple(str(m).lower() for m in _as_list(d.get("modalities")))
@@ -110,11 +109,11 @@ class InputSpec:
 
 @dataclass(frozen=True)
 class RequireAny:
-    keys: Tuple[str, ...]
-    modalities: Tuple[str, ...]
+    keys: tuple[str, ...]
+    modalities: tuple[str, ...]
 
     @staticmethod
-    def from_dict(d: Mapping[str, Any]) -> "RequireAny":
+    def from_dict(d: Mapping[str, Any]) -> RequireAny:
         keys = tuple(str(k) for k in _as_list(d.get("keys")))
         mods = tuple(str(m).lower() for m in _as_list(d.get("modalities")))
         if not keys or not mods:
@@ -124,13 +123,13 @@ class RequireAny:
 
 @dataclass(frozen=True)
 class BundleConfig:
-    emit_keys: Tuple[str, ...]
-    emit_modalities: Tuple[str, ...]
-    require_all: Dict[str, Tuple[str, ...]]
-    require_any: Tuple[RequireAny, ...]
+    emit_keys: tuple[str, ...]
+    emit_modalities: tuple[str, ...]
+    require_all: dict[str, tuple[str, ...]]
+    require_any: tuple[RequireAny, ...]
 
     @staticmethod
-    def from_dict(d: Mapping[str, Any], *, default_modalities: Sequence[str], default_keys: Sequence[str]) -> "BundleConfig":
+    def from_dict(d: Mapping[str, Any], *, default_modalities: Sequence[str], default_keys: Sequence[str]) -> BundleConfig:
         d = dict(d or {})
 
         # Required shape:
@@ -149,7 +148,7 @@ class BundleConfig:
         req = dict(d.get("require") or {})
 
         all_raw = dict(req.get("all") or {})
-        require_all: Dict[str, Tuple[str, ...]] = {
+        require_all: dict[str, tuple[str, ...]] = {
             str(k): tuple(str(m).lower() for m in _as_list(v))
             for k, v in all_raw.items()
         }
@@ -173,16 +172,16 @@ class BundleConfig:
 @dataclass(frozen=True)
 class BucketRule:
     name: str
-    includes: Dict[str, Tuple[str, ...]]
-    missing: Dict[str, Tuple[str, ...]]
+    includes: dict[str, tuple[str, ...]]
+    missing: dict[str, tuple[str, ...]]
 
     @staticmethod
-    def from_dict(d: Mapping[str, Any]) -> "BucketRule":
+    def from_dict(d: Mapping[str, Any]) -> BucketRule:
         name = str(d["name"])
         inc_raw = dict(d.get("includes") or {})
         mis_raw = dict(d.get("missing") or {})
 
-        def _norm(mm: Mapping[str, Any]) -> Dict[str, Tuple[str, ...]]:
+        def _norm(mm: Mapping[str, Any]) -> dict[str, tuple[str, ...]]:
             return {str(k): tuple(str(m).lower() for m in _as_list(v)) for k, v in mm.items()}
 
         return BucketRule(name=name, includes=_norm(inc_raw), missing=_norm(mis_raw))
@@ -340,11 +339,11 @@ def _build_record_datalist(
     bucket_rules: Sequence[BucketRule],
     exhaustive_buckets: bool,
     exclusive_buckets: bool,
-    default_meta_keys: Optional[Sequence[str]] = None,
-) -> Tuple[List[Dict[str, Any]], Dict[str, List[int]]]:
-    items: List[Dict[str, Any]] = []
+    default_meta_keys: Sequence[str] | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, list[int]]]:
+    items: list[dict[str, Any]] = []
 
-    bucket_to_indices: Dict[str, List[int]] = {b.name: [] for b in bucket_rules}
+    bucket_to_indices: dict[str, list[int]] = {b.name: [] for b in bucket_rules}
     meta_keys = [str(k) for k in (default_meta_keys or [])]
 
     for rec in records:
@@ -355,7 +354,7 @@ def _build_record_datalist(
         session = str(rec.get("session", ""))
         demographics = rec.get("demographics", {})
 
-        sample: Dict[str, Any] = {
+        sample: dict[str, Any] = {
             "record_id": _make_record_id(rec),
             "dataset": dataset_id,
             "subject": subject,
@@ -390,7 +389,7 @@ def _build_record_datalist(
                 # seg_map can emit modalities not in cfg.emit_modalities (e.g. "seg").
                 allowed_mods |= set(spec.modalities)
 
-            out_stream: Dict[str, str] = {}
+            out_stream: dict[str, str] = {}
             for m in spec.modalities:
                 m_lc = str(m).lower()
                 if m_lc not in allowed_mods:
@@ -547,8 +546,8 @@ class BrainScapePairedDataModule(pl.LightningDataModule):
         modalities: Sequence[str],
         input_specs: Sequence[Mapping[str, Any]],
         pair: Mapping[str, Any],
-        buckets: Optional[Mapping[str, Any]] = None,
-        bucket_probs: Optional[Mapping[str, float]] = None,
+        buckets: Mapping[str, Any] | None = None,
+        bucket_probs: Mapping[str, float] | None = None,
         use_bucket_sampler: bool = True,
         verify_paths: bool = True,
         # transforms
@@ -557,19 +556,19 @@ class BrainScapePairedDataModule(pl.LightningDataModule):
         test_tf=None,
         # dataloader knobs
         batch_size: int = 1,
-        val_batch_size: Optional[int] = None,
-        test_batch_size: Optional[int] = None,
+        val_batch_size: int | None = None,
+        test_batch_size: int | None = None,
         cache_rate: float = 0.0,
         num_workers: int = 4,
         prefetch_factor: int = 2,
         persistent_workers: bool = False,
         pin_memory: bool = True,
-        subset_frac: Optional[float] = None,
+        subset_frac: float | None = None,
         seed: int = 42,
-        dataset_filter: Optional[Sequence[str]] = None,
-        dataset_filter_exclude: Optional[Sequence[str]] = None,
+        dataset_filter: Sequence[str] | None = None,
+        dataset_filter_exclude: Sequence[str] | None = None,
         # compatibility knob (present in your configs; not required here)
-        default_meta_keys: Optional[Sequence[str]] = None,
+        default_meta_keys: Sequence[str] | None = None,
     ) -> None:
         super().__init__()
 
@@ -635,7 +634,7 @@ class BrainScapePairedDataModule(pl.LightningDataModule):
         # Parse buckets
         buckets = dict(buckets or {})
         rules_raw = buckets.get("rules", None) or []
-        self.bucket_rules: List[BucketRule] = [BucketRule.from_dict(r) for r in rules_raw]
+        self.bucket_rules: list[BucketRule] = [BucketRule.from_dict(r) for r in rules_raw]
         self.exhaustive_buckets: bool = bool(buckets.get("exhaustive", True))
         self.exclusive_buckets: bool = bool(buckets.get("exclusive", True))
 
@@ -645,7 +644,7 @@ class BrainScapePairedDataModule(pl.LightningDataModule):
             raise ValueError(f"Duplicate bucket names in buckets.rules: {bnames}")
 
         # Build stream modalities for validation (emit + seg_map allowances).
-        stream_modalities: Dict[str, List[str]] = {k: [] for k in spec_keys}
+        stream_modalities: dict[str, list[str]] = {k: [] for k in spec_keys}
         emit_mods = set(self.bundle_cfg.emit_modalities)
         for spec in self.input_specs:
             allowed = set(spec.modalities) if spec.seg_map else (set(spec.modalities) & emit_mods)
@@ -668,7 +667,7 @@ class BrainScapePairedDataModule(pl.LightningDataModule):
         )
 
         # bucket probs default: proportional to bucket size (uniform over all samples)
-        self._bucket_probs_user: Dict[str, float] = dict(bucket_probs or {})
+        self._bucket_probs_user: dict[str, float] = dict(bucket_probs or {})
         self.use_bucket_sampler = bool(use_bucket_sampler)
         self.verify_paths = bool(verify_paths)
 
@@ -699,11 +698,11 @@ class BrainScapePairedDataModule(pl.LightningDataModule):
 
         self.default_meta_keys = [str(k) for k in (default_meta_keys or [])]
 
-        self._datasets: Dict[str, CacheDataset] = {}
-        self._bucket_to_indices: Dict[str, Dict[str, List[int]]] = {}
-        self._train_sampler: Optional[WeightedRandomSampler] = None
+        self._datasets: dict[str, CacheDataset] = {}
+        self._bucket_to_indices: dict[str, dict[str, list[int]]] = {}
+        self._train_sampler: WeightedRandomSampler | None = None
 
-    def setup(self, stage: Optional[str] = None) -> None:
+    def setup(self, stage: str | None = None) -> None:
         # build datasets lazily; stage can be "fit"/"test" etc.
         if stage in (None, "fit", "train"):
             train_records = _load_json_split(self.json_path, "train")
@@ -810,7 +809,7 @@ class BrainScapePairedDataModule(pl.LightningDataModule):
         return out
 
 
-    def _subset_records(self, records: Sequence[Mapping[str, Any]], frac: float) -> List[Mapping[str, Any]]:
+    def _subset_records(self, records: Sequence[Mapping[str, Any]], frac: float) -> list[Mapping[str, Any]]:
         if not (0.0 < float(frac) <= 1.0):
             raise ValueError("subset_frac must be in (0, 1]")
         n = max(1, int(round(len(records) * float(frac))))
@@ -832,7 +831,7 @@ class BrainScapePairedDataModule(pl.LightningDataModule):
 
         buckets = self._bucket_to_indices["train"]
         # default probs: proportional to bucket size (so uniform overall)
-        probs: Dict[str, float] = {}
+        probs: dict[str, float] = {}
         total = sum(len(v) for v in buckets.values())
         for b, idxs in buckets.items():
             probs[b] = (len(idxs) / total) if total > 0 else 0.0
@@ -901,7 +900,7 @@ class BrainScapePairedDataModule(pl.LightningDataModule):
         print(msg)
         logger.info(msg)
         
-    def get_bucket_stats(self, split: str = "train") -> Dict[str, int]:
+    def get_bucket_stats(self, split: str = "train") -> dict[str, int]:
         b = self._bucket_to_indices.get(split, {})
         return {k: len(v) for k, v in b.items()}
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import inspect
-from typing import Any, Optional, Sequence
+from typing import Any
 
 import torch
 
@@ -11,7 +11,7 @@ def set_timesteps_safe(
     num_steps: int,
     *,
     device: torch.device,
-    input_img_size_numel: Optional[int] = None,
+    input_img_size_numel: int | None = None,
 ) -> torch.Tensor:
     """Call ``scheduler.set_timesteps`` across MONAI / diffusers-like variants.
 
@@ -62,7 +62,7 @@ def scheduler_step_safe(
     t: Any,
     sample: torch.Tensor,
     *,
-    next_t: Optional[Any] = None,
+    next_t: Any | None = None,
 ) -> torch.Tensor:
     """Normalize ``scheduler.step`` output to a Tensor.
 

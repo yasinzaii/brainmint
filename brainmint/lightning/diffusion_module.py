@@ -1,20 +1,19 @@
+import contextlib
+import functools
 import logging
 import warnings
-from typing import Any, Dict, Optional, Sequence, Tuple, Union, List
+from collections.abc import Sequence
+from typing import Any
 
+import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-import pytorch_lightning as pl
-
-import functools
-import contextlib
-
+from monai.networks.schedulers import DDPMScheduler, RFlowScheduler
 from monai.networks.schedulers.ddpm import DDPMPredictionType
-from monai.networks.schedulers import RFlowScheduler, DDPMScheduler
 
+from brainmint.utils.ema import EMAConfig, ExponentialMovingAverage
 from brainmint.utils.gpumem_utils import SimpleGPUMemoryTracker
 from brainmint.utils.state_dict_loader import StateDictLoaderMixin
-from brainmint.utils.ema import EMAConfig, ExponentialMovingAverage
 
 _LOG = logging.getLogger(__name__)
 
@@ -27,13 +26,13 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
 
     def __init__(
         self,
-        autoencoder: Optional[nn.Module],
+        autoencoder: nn.Module | None,
         diffusion_unet: nn.Module,
         noise_scheduler: nn.Module,
-        hparams: Dict[str, Any],
+        hparams: dict[str, Any],
         optimizer,     # Optimizer (Partial)
         polylr=None,   # Scheduler (Partial)
-        demographics_encoder: Optional[nn.Module] = None, 
+        demographics_encoder: nn.Module | None = None, 
     ):
         super().__init__()
         self.save_hyperparameters(
@@ -114,16 +113,16 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
             self.latent_sigma_key = str(self.partial_sampling.get("sigma_key", ""))
             if self.partial_sampling_enabled and not self.latent_sigma_key:
                 raise ValueError("Partial posterior sampling enabled, yet partial_sampling.sigma_key not configured")
-            print(f"Partial posterior sampling is enabled")
+            print("Partial posterior sampling is enabled")
 
 
         # Runtime
-        self._total_steps: Optional[int] = None
+        self._total_steps: int | None = None
         self._lr_scheduler = None  # populated in ``configure_optimizers`` for testing/inspection
 
         # Scale Factor
         sf_cfg = hp.get("scale_factor", None)
-        sf_tensor: Optional[torch.Tensor] = (
+        sf_tensor: torch.Tensor | None = (
             None if (sf_cfg is None or float(sf_cfg) <= 0.0) else torch.tensor(float(sf_cfg), dtype=torch.float32)
         )
         self.register_buffer("_scale_factor", sf_tensor, persistent=True)
@@ -159,7 +158,7 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
         self._ema_use_for_sampling = bool(ema_cfg.get("use_for_sampling", True))
         self._ema_last_step: int = -1
         self._ema_loaded: bool = False
-        self.ema: Optional[ExponentialMovingAverage] = None
+        self.ema: ExponentialMovingAverage | None = None
         if self._ema_enabled:
             cfg = EMAConfig(
                 decay=float(ema_cfg.get("decay", 0.9999)),
@@ -295,7 +294,7 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
         raise ValueError("Autoencoder is missing the callable function decode")
 
     
-    def _prep_condition_tensors(self, batch: Dict[str, Any]) -> Dict[str, torch.Tensor]:
+    def _prep_condition_tensors(self, batch: dict[str, Any]) -> dict[str, torch.Tensor]:
         """
         Extract required conditioning tensors from ``batch``.
           - class_labels: from ``batch["modality_map"]`` when the UNet exposes
@@ -310,7 +309,7 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
         else:
             raise KeyError("Missing 'class_labels' for class-conditioned sampling")
             
-    def _prep_demographics_condition_tensors(self, batch: Dict[str, Any]) -> Dict[str, torch.Tensor]:
+    def _prep_demographics_condition_tensors(self, batch: dict[str, Any]) -> dict[str, torch.Tensor]:
         """
         Extract required Optional conditioning tensors from ``batch``.
 
@@ -318,7 +317,7 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
           - demo_values:  from ``batch["demo_values"]``
           - demo_missing: from ``batch["demo_missing"]``
         """
-        cond: Dict[str, torch.Tensor] = {}
+        cond: dict[str, torch.Tensor] = {}
         
         # Demographic conditioning (Optional)
         if "demo_values" in batch:
@@ -340,14 +339,14 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
         return cond
 
 
-    def setup(self, stage: Optional[str] = None) -> None:
+    def setup(self, stage: str | None = None) -> None:
         if hasattr(super(), "setup"):
             super().setup(stage)  # Lightning setup()
 
         
         # Warn if VAE is not loaded
         if self.autoencoder is None:
-            warnings.warn("No autoencoder provided - latents will pass through during decode; ensure this is intentional")
+            warnings.warn("No autoencoder provided - latents will pass through during decode; ensure this is intentional", stacklevel=2)
         else:
             has_ae_spec = any(s.get("target") == "autoencoder" for s in self.hparams.get("weight_loads", []))
             if has_ae_spec:
@@ -403,8 +402,7 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
     def _assert_weight_decay_config(self):
         
         wd_enabled = bool(self.weight_decay_conf.get("enabled", False))
-        split_groups = bool(self.weight_decay_conf.get("split_param_groups", True))
-
+        #split_groups = bool(self.weight_decay_conf.get("split_param_groups", True))
         opt_wd = self._get_weight_decay_from_partial()
         opt_tar = self._get_opt_target_name()
 
@@ -423,7 +421,7 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
         # fallback
         return str(type(opt))
 
-    def _build_param_groups(self, modules: List[Tuple[str, nn.Module]], weight_decay: float):
+    def _build_param_groups(self, modules: list[tuple[str, nn.Module]], weight_decay: float):
         """
         Create two param groups:
         - decay: params that get weight decay
@@ -527,7 +525,7 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
                 return lg.experiment
         return None
         
-    def _compute_z(self, batch: Dict[str, Any], partial_sampling: bool = False) -> torch.Tensor:
+    def _compute_z(self, batch: dict[str, Any], partial_sampling: bool = False) -> torch.Tensor:
         """Extract and optionally encode latents from ``batch``.
 
         When ``encode_using_autoencoder`` is ``True`` the batch is expected to
@@ -574,19 +572,19 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
 
         return z * self._get_scale_factor(z)
 
-    def _apply_noise(self, z: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def _apply_noise(self, z: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Sample random noise, timesteps and perturb latent ``z``."""
         noise = torch.randn_like(z)
         if isinstance(self.noise_scheduler, RFlowScheduler):
             timesteps = self.noise_scheduler.sample_timesteps(z)
         else:
-            num_tr = int(getattr(self.noise_scheduler, "num_train_timesteps"))
+            num_tr = int(self.noise_scheduler.num_train_timesteps)
             timesteps = torch.randint(0, num_tr, (z.shape[0],), device=z.device).long()
 
         z_noisy = self.noise_scheduler.add_noise(original_samples=z, noise=noise, timesteps=timesteps)
         return timesteps, noise, z_noisy
 
-    def _encode_demographics(self, batch: Dict[str, Any]) -> Optional[torch.Tensor]:
+    def _encode_demographics(self, batch: dict[str, Any]) -> torch.Tensor | None:
         """
         Turn raw demographics from the batch into an embedding vector.
 
@@ -665,7 +663,7 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
         return dem_emb
 
 
-    def _log_learning_rates(self, when: str, opt: Optional[torch.optim.Optimizer] = None) -> None:
+    def _log_learning_rates(self, when: str, opt: torch.optim.Optimizer | None = None) -> None:
         optimizers = []
         if opt is not None:
             optimizers = [opt]
@@ -698,7 +696,7 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
         self._log_learning_rates(f"start epoch {self.current_epoch}")
 
 
-    def training_step(self, batch: Dict[str, Any], batch_idx: int):
+    def training_step(self, batch: dict[str, Any], batch_idx: int):
 
         z = self._compute_z(batch, partial_sampling=True)
         bs = z.size(0)
@@ -742,7 +740,7 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
         if self.val_memory_tracker is not None:
             self.val_memory_tracker.reset_peak()
 
-    def validation_step(self, batch: Dict[str, Any], batch_idx: int):
+    def validation_step(self, batch: dict[str, Any], batch_idx: int):
 
         z = self._compute_z(batch, partial_sampling=False)
         bs = z.size(0)
@@ -878,11 +876,11 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
     @torch.no_grad()
     def sample_latent(
         self,
-        output_size: Tuple[int, int, int], # Must be equal to input size Z, Y, X
+        output_size: tuple[int, int, int], # Must be equal to input size Z, Y, X
         batch_size: int = 1,
-        class_labels: Optional[torch.Tensor] = None,
-        demo_values: Optional[torch.Tensor] = None,
-        demo_missing: Optional[torch.Tensor] = None,
+        class_labels: torch.Tensor | None = None,
+        demo_values: torch.Tensor | None = None,
+        demo_missing: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Generate latent with scheduler loop; returns latent tensor ``(B, C, Z, Y, X)``."""
 
@@ -911,7 +909,7 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
             
             # Compute demographics embedding 
             if demo_values is not None or demo_missing is not None:
-                emb_encoder_inp: Dict[str, Any] = {}
+                emb_encoder_inp: dict[str, Any] = {}
                 if demo_values is not None:
                     emb_encoder_inp["demo_values"] = demo_values
                 if demo_missing is not None:
@@ -925,7 +923,7 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
                 t_val = t.item()
                 next_t_val = all_t[i + 1].item() if i + 1 < len(all_t) else 0
                 t_batch = torch.full((batch_size,), t_val, device=self.device, dtype=all_t.dtype)
-                inputs: Dict[str, Any] = {"x": img, "timesteps": t_batch}
+                inputs: dict[str, Any] = {"x": img, "timesteps": t_batch}
                 if getattr(self.unet, "num_class_embeds", 0):
                     if class_labels is None:
                         raise ValueError("Missing 'class_labels' for class-conditioned sampling")
@@ -954,11 +952,11 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
     @torch.no_grad()
     def sample(
         self,
-        output_size: Tuple[int, int, int],
+        output_size: tuple[int, int, int],
         batch_size: int = 1,
-        class_labels: Optional[torch.Tensor] = None,
-        demo_values: Optional[torch.Tensor] = None,
-        demo_missing: Optional[torch.Tensor] = None,
+        class_labels: torch.Tensor | None = None,
+        demo_values: torch.Tensor | None = None,
+        demo_missing: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Generate decoded images using :meth:`sample_latent` and the autoencoder."""
         z = self.sample_latent(
@@ -976,10 +974,10 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
     def _run_inference(
         self,
         x: torch.Tensor,
-        class_labels: Optional[torch.Tensor] = None,
-        demo_values: Optional[torch.Tensor] = None,
-        demo_missing: Optional[torch.Tensor] = None,
-    ) -> Dict[str, torch.Tensor]:
+        class_labels: torch.Tensor | None = None,
+        demo_values: torch.Tensor | None = None,
+        demo_missing: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
         """Helper for :class:`SaveMRIImages` callback.
 
         Generates a fresh latent using :meth:`sample_latent` that matches the
@@ -1017,9 +1015,9 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
     def run_inference(
         self,
         x: torch.Tensor,
-        class_labels: Optional[Union[torch.Tensor, int, str, Sequence[Union[int, str]]]] = None,
-        demo_values: Optional[torch.Tensor] = None,
-        demo_missing: Optional[torch.Tensor] = None,
+        class_labels: torch.Tensor | int | str | Sequence[int | str] | None = None,
+        demo_values: torch.Tensor | None = None,
+        demo_missing: torch.Tensor | None = None,
     ):
         """Public wrapper used by external callers and callbacks.
 
@@ -1028,7 +1026,7 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
         :attr:`modality_map` when present.
         """
 
-        labels: Optional[torch.Tensor]
+        labels: torch.Tensor | None
         if class_labels is None or isinstance(class_labels, torch.Tensor):
             labels = class_labels  # may be None
         else:
@@ -1053,10 +1051,10 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
     def run_inference_from_image(
         self,
         image: torch.Tensor,
-        class_labels: Optional[Union[torch.Tensor, int, str, Sequence[Union[int, str]]]] = None,
-        demo_values: Optional[torch.Tensor] = None,
-        demo_missing: Optional[torch.Tensor] = None,
-    ) -> Dict[str, torch.Tensor]:
+        class_labels: torch.Tensor | int | str | Sequence[int | str] | None = None,
+        demo_values: torch.Tensor | None = None,
+        demo_missing: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
         """
         Convenience wrapper:
         image -> (autoencoder.encode) -> latent z
@@ -1098,7 +1096,7 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
         )
     @torch.no_grad()
     
-    def run_inference_image_bs(self, kwargs: Dict[str, Any]) -> Dict[str, torch.Tensor]:
+    def run_inference_image_bs(self, kwargs: dict[str, Any]) -> dict[str, torch.Tensor]:
         """
         Dict-style wrapper for callbacks that call infer_fn(infer_kwargs).
 
@@ -1125,7 +1123,7 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
             demo_missing=demo_missing,
         )
     
-    def run_inference_bs(self, kwargs: Dict[str, torch.Tensor]):
+    def run_inference_bs(self, kwargs: dict[str, torch.Tensor]):
         """BrainScape-style wrapper that accepts a batch dict.
 
         Expected keys:
@@ -1185,7 +1183,7 @@ class DiffusionModule(StateDictLoaderMixin, pl.LightningModule):
         batch_size: int,
         device: torch.device,
         dtype: torch.dtype = torch.float32,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Create dummy demographics corresponding to all 'N/A'.
 

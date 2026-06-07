@@ -1,9 +1,8 @@
-from __future__ import annotations
-
 """ALDM latent diffusion builders."""
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Optional, Union
 
 from omegaconf import OmegaConf
 from torch import nn
@@ -13,9 +12,9 @@ from brainmint.integrations.aldm.repo import ALDM_LDM_CONFIG_RELPATH, ldm_import
 
 def build_ldm_model(
     *,
-    ldm_ckpt_path: Union[str, Path],
-    vqgan_stage2_ckpt_path: Union[str, Path],
-    ldm_config_path: Optional[Union[str, Path]] = None,
+    ldm_ckpt_path: str | Path,
+    vqgan_stage2_ckpt_path: str | Path,
+    ldm_config_path: str | Path | None = None,
 ) -> nn.Module:
     """Instantiate the full ALDM LDM model with checkpoint paths patched in."""
 

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, List, Mapping, Optional, Sequence, Tuple
+from typing import Any
 
 import nibabel as nib
 import numpy as np
@@ -17,14 +18,14 @@ from brainmint.utils.spatial import center_crop_or_pad_3d
 log = logging.getLogger(__name__)
 
 
-def _as_3tuple_int(x: Sequence[int], *, name: str) -> Tuple[int, int, int]:
+def _as_3tuple_int(x: Sequence[int], *, name: str) -> tuple[int, int, int]:
     t = tuple(int(v) for v in x)
     if len(t) != 3:
         raise ValueError(f"{name} must have length 3, got {len(t)}")
     return t  # (Z,Y,X)
 
 
-def _as_3tuple_float(x: Sequence[float], *, name: str) -> Tuple[float, float, float]:
+def _as_3tuple_float(x: Sequence[float], *, name: str) -> tuple[float, float, float]:
     t = tuple(float(v) for v in x)
     if len(t) != 3:
         raise ValueError(f"{name} must have length 3, got {len(t)}")
@@ -76,7 +77,7 @@ class BratsPipelinePostprocess(Postprocessor):
         target_spacing_xyz: Sequence[float] = (1.0, 1.0, 1.0),
         skip_brain_extraction: bool = False,
         enable_registration: bool = True,
-        limit_cuda_visible_devices: Optional[str] = "0",  # kept for hydra compat; don't set env here
+        limit_cuda_visible_devices: str | None = "0",  # kept for hydra compat; don't set env here
         modality_key: str = "modality",
         resample_order: int = 1,
         temp_prefix: str = "brainmint_brats_",
@@ -162,7 +163,7 @@ class BratsPipelinePostprocess(Postprocessor):
             raise ValueError(f"Crop/pad produced shape {out.shape}, expected {self.roi_size_zyx}")
         return out
 
-    def _resolve_modalities_from_metadata(self, *, batch_size: int, metadata: Mapping[str, Any]) -> List[str]:
+    def _resolve_modalities_from_metadata(self, *, batch_size: int, metadata: Mapping[str, Any]) -> list[str]:
         if self.modality_key not in metadata:
             raise KeyError(
                 f"Missing metadata['{self.modality_key}'] for BRATS postprocess. "
@@ -264,7 +265,7 @@ class BratsPipelinePostprocess(Postprocessor):
 
         return out_path
 
-    def process(self, x: torch.Tensor, *, ctx: Optional[InferenceContext] = None) -> torch.Tensor:
+    def process(self, x: torch.Tensor, *, ctx: InferenceContext | None = None) -> torch.Tensor:
         if x.ndim != 5:
             raise ValueError(f"Expected 5D tensor (B,C,Z,Y,X), got shape={tuple(x.shape)}")
         if ctx is None:

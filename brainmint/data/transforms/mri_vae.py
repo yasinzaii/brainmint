@@ -10,21 +10,18 @@ MRI-only VAE transform for BrainScape.
 * Intensity mapped to [0, 1] using 0-99.6 %ile.
 """
 
-from typing import List, Optional, Tuple, Any
+from typing import Any
+
 import torch
-
 from hydra.utils import instantiate
-from omegaconf import DictConfig, ListConfig
-
 from monai.transforms import (
     Compose,
     EnsureChannelFirstd,
     EnsureTyped,
-    Lambdad,
     LoadImaged,
     Orientationd,
-    RandAffined,
     RandAdjustContrastd,
+    RandAffined,
     RandBiasFieldd,
     RandFlipd,
     RandGibbsNoised,
@@ -36,12 +33,13 @@ from monai.transforms import (
     RandSpatialCropd,
     RandZoomd,
     ResizeWithPadOrCropd,
-    ScaleIntensityd,
     ScaleIntensityRangePercentilesd,
-    SelectItemsd
+    SelectItemsd,
 )
+from omegaconf import DictConfig, ListConfig
 
-def _instantiate_list(xforms_like: Optional[Any]):
+
+def _instantiate_list(xforms_like: Any | None):
     """Instantiate a list of transforms from Hydra configs or pass through callables."""
     if xforms_like is None:
         return []
@@ -53,7 +51,7 @@ def _instantiate_list(xforms_like: Optional[Any]):
     return [instantiate(xforms_like) if isinstance(xforms_like, DictConfig) else xforms_like]
     
 
-def _rand_intensity_aug(image_keys: List[str]):
+def _rand_intensity_aug(image_keys: list[str]):
     """Random intensity perturbations."""
     return [
         RandBiasFieldd(keys=image_keys, prob=0.3, coeff_range=(0.0, 0.3)),
@@ -66,19 +64,19 @@ def get_vae_transform(
     is_train: bool,
     affine_type: str = "original",  # "original" | "rigid" | "rand_zoom"
     random_aug: bool = True,
-    patch_size: Tuple[int, int, int] = (256, 256, 256),
-    val_patch_size: Tuple[int, int, int] = (256, 256, 256),
-    brain_roi_size: Tuple[int, int, int] = (180, 200, 155),
+    patch_size: tuple[int, int, int] = (256, 256, 256),
+    val_patch_size: tuple[int, int, int] = (256, 256, 256),
+    brain_roi_size: tuple[int, int, int] = (180, 200, 155),
     output_dtype: torch.dtype = torch.float32,
-    image_keys: List[str] = ["image"],
-    label_keys: List[str] = [],
-    passthrough_keys: List[str] = [],
-    meta_keys: List[str] = [],
+    image_keys: list[str] | None = None,
+    label_keys: list[str] | None = None,
+    passthrough_keys: list[str] | None = None,
+    meta_keys: list[str] | None = None,
 
     input_image_as_conditioning = False, 
 
-    extra_xforms_start: List[Any] = [],
-    extra_xforms_end: List[Any] = [],
+    extra_xforms_start: list[Any] | None = None,
+    extra_xforms_end: list[Any] | None = None,
 ) -> Compose:
     """Return a Compose transform matching the requested settings.
 
@@ -86,6 +84,11 @@ def get_vae_transform(
     while ``passthrough_keys`` are simply loaded.  All keys listed
     (including ``meta_keys``) are retained by an initial ``SelectItemsd``.
     """
+
+    image_keys = ["image"] if image_keys is None else image_keys
+    label_keys = [] if label_keys is None else label_keys
+    passthrough_keys = [] if passthrough_keys is None else passthrough_keys
+    meta_keys = [] if meta_keys is None else meta_keys
 
     img_lbl_keys = list(image_keys) + list(label_keys)
     all_keys = img_lbl_keys + list(passthrough_keys) + list(meta_keys)
@@ -95,7 +98,7 @@ def get_vae_transform(
     # TODO: Correctly Manage batches with missing label_keys ?
     interp_mode = ["bilinear"] * len(image_keys) + ["nearest"] * len(label_keys)
 
-    xforms: List[Any] = []
+    xforms: list[Any] = []
 
     xforms += _instantiate_list(extra_xforms_start)
     xforms += [SelectItemsd(keys=all_keys, allow_missing_keys=True)]
@@ -268,18 +271,23 @@ class VAETransform:
         is_train: bool,
         random_aug: bool,
         affine_type: str = "original",
-        patch_size: Tuple[int,int,int] = (256, 256, 256),
-        val_patch_size: Tuple[int,int,int] = None,
-        brain_roi_size: Tuple[int,int,int]  = None,
+        patch_size: tuple[int,int,int] = (256, 256, 256),
+        val_patch_size: tuple[int,int,int] = None,
+        brain_roi_size: tuple[int,int,int]  = None,
         output_dtype: torch.dtype = torch.float32,
-        image_keys: List[str] = ["image"],
-        label_keys: List[str] = [],
-        passthrough_keys: List[str] = [],
-        meta_keys: List[str] = ["modality"],
-        extra_xforms_start: Optional[List] = None, 
-        extra_xforms_end: Optional[List] = None,
+        image_keys: list[str] | None = None,
+        label_keys: list[str] | None = None,
+        passthrough_keys: list[str] | None = None,
+        meta_keys: list[str] | None = None,
+        extra_xforms_start: list | None = None, 
+        extra_xforms_end: list | None = None,
     ):
         
+        image_keys = ["image"] if image_keys is None else image_keys
+        label_keys = [] if label_keys is None else label_keys
+        passthrough_keys = [] if passthrough_keys is None else passthrough_keys
+        meta_keys = ["modality"] if meta_keys is None else meta_keys
+
         if affine_type not in {"original", "rigid", "rand_zoom"}:
             raise ValueError(
                 "affine_type must be 'original', 'rigid' or 'rand_zoom'. "

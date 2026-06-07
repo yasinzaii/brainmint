@@ -1,22 +1,19 @@
 # tests/data/test_brainscape.py
 import sys
-import json
 from pathlib import Path
 
-
-import torch
 import pytest
-
-from hydra import compose, initialize, initialize_config_dir
+import torch
+from hydra import compose, initialize_config_dir
 from hydra.utils import instantiate
-from omegaconf import open_dict, OmegaConf
+from omegaconf import OmegaConf
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 CONFIG_DIR   = PROJECT_ROOT / "configs"
 TEST_CONFIG_DIR = PROJECT_ROOT / "tests" / "fixtures" / "configs"
 
-from tests.helpers.brainscape import make_minimal_brainscape_dataset
+from tests.helpers.brainscape import make_minimal_brainscape_dataset  # noqa: E402
 
 
 def _generate_dummy_latent_dataset(tmp_path: Path) -> tuple[Path, Path]:
@@ -97,7 +94,7 @@ def test_modality_class_labels_and_mapping(tmp_path, monkeypatch, num_workers=0)
 
     # key_name should be present
     key_name = cfg.dataset.conditioning.modality_conditioning.key_name
-    assert key_name in batch, f"key_name missing; transform not attached?"
+    assert key_name in batch, "key_name missing; transform not attached?"
     assert isinstance(batch[key_name], torch.Tensor)
 
     cfg_map = dict(cfg.dataset.conditioning.modality_map)

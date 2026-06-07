@@ -1,4 +1,6 @@
-from typing import Any, Dict, Hashable, List, Optional, Sequence
+from collections.abc import Hashable, Sequence
+from typing import Any
+
 from monai.transforms import MapTransform
 
 
@@ -15,13 +17,13 @@ class CopyKeysToNewKeysd(MapTransform):
     def __init__(
         self,
         src_keys: Sequence[Hashable],
-        dst_keys: Optional[Sequence[Hashable]] = None,
+        dst_keys: Sequence[Hashable] | None = None,
         postfix: str = "_path",
         allow_missing_keys: bool = False,
     ) -> None:
         super().__init__(keys=list(src_keys), allow_missing_keys=allow_missing_keys)
 
-        self.src_keys: List[Hashable] = list(src_keys)
+        self.src_keys: list[Hashable] = list(src_keys)
 
         if dst_keys is not None:
             if len(dst_keys) != len(self.src_keys):
@@ -29,13 +31,13 @@ class CopyKeysToNewKeysd(MapTransform):
                     f"dst_keys must have same length as src_keys. "
                     f"Got len(src_keys)={len(self.src_keys)} len(dst_keys)={len(dst_keys)}"
                 )
-            self.dst_keys: List[Hashable] = list(dst_keys)
+            self.dst_keys: list[Hashable] = list(dst_keys)
         else:
             self.dst_keys = [f"{k}{postfix}" for k in self.src_keys]
 
-    def __call__(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def __call__(self, data: dict[str, Any]) -> dict[str, Any]:
         d = dict(data)
-        for src, dst in zip(self.src_keys, self.dst_keys):
+        for src, dst in zip(self.src_keys, self.dst_keys, strict=True):
             if src not in d:
                 if self.allow_missing_keys:
                     continue

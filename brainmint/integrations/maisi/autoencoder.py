@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Installed-MONAI MAISI autoencoder builders."""
+
+from __future__ import annotations
 
 from typing import Any
 

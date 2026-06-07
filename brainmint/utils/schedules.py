@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 __all__ = [
     "LinearSegment",
@@ -80,7 +80,7 @@ class PiecewiseSchedule:
     evaluate to the full effective config rather than only the newest segment.
     """
 
-    def __init__(self, spec: Optional[Sequence[Mapping[str, Any]]], *, name: str) -> None:
+    def __init__(self, spec: Sequence[Mapping[str, Any]] | None, *, name: str) -> None:
         self.name = name
         self.steps: list[StepPoint] = []
         self.lines: list[LinearSegment] = []
@@ -133,7 +133,7 @@ class PiecewiseSchedule:
         t = (ep - segment.start_epoch) / float(segment.end_epoch - segment.start_epoch)
         return _deep_lerp(segment.start_value, segment.end_value, t)
 
-    def value_at(self, epoch: int) -> Optional[Any]:
+    def value_at(self, epoch: int) -> Any | None:
         if not (self.steps or self.lines):
             return None
 
@@ -187,7 +187,7 @@ def build_piecewise_linear_lambda(schedule: Sequence[Sequence[int | float]]):
         if epoch <= points[0][0]:
             return points[0][1]
 
-        for (start_epoch, start_val), (end_epoch, end_val) in zip(points[:-1], points[1:]):
+        for (start_epoch, start_val), (end_epoch, end_val) in zip(points[:-1], points[1:], strict=True):
             if epoch <= end_epoch:
                 span = max(1, end_epoch - start_epoch)
                 t = (epoch - start_epoch) / span

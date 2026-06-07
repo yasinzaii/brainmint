@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping, Optional, Union
+from typing import Any
 
 import numpy as np
 
 from brainmint.inference.io.base import WriterBase
 
-PathLike = Union[str, Path]
+PathLike = str | Path
 
 
 @dataclass
@@ -17,7 +18,7 @@ class NpyWriter(WriterBase):
 
     allow_pickle: bool = False
 
-    def write(self, array: np.ndarray, path: PathLike, *, meta: Optional[Mapping[str, Any]] = None) -> Path:  # noqa: ARG002
+    def write(self, array: np.ndarray, path: PathLike, *, meta: Mapping[str, Any] | None = None) -> Path:  # noqa: ARG002
         p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)
         np.save(str(p), array, allow_pickle=self.allow_pickle)
@@ -31,10 +32,10 @@ class NiftiWriter(WriterBase):
     If nibabel is not installed, this writer raises an ImportError.
     """
 
-    affine: Optional[np.ndarray] = None
+    affine: np.ndarray | None = None
     dtype: Any = np.float32
 
-    def write(self, array: np.ndarray, path: PathLike, *, meta: Optional[Mapping[str, Any]] = None) -> Path:  # noqa: ARG002
+    def write(self, array: np.ndarray, path: PathLike, *, meta: Mapping[str, Any] | None = None) -> Path:  # noqa: ARG002
         p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)
 
@@ -68,7 +69,7 @@ class PngWriter(WriterBase):
 
     normalize: bool = True
 
-    def write(self, array: np.ndarray, path: PathLike, *, meta: Optional[Mapping[str, Any]] = None) -> Path:  # noqa: ARG002
+    def write(self, array: np.ndarray, path: PathLike, *, meta: Mapping[str, Any] | None = None) -> Path:  # noqa: ARG002
         p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)
 
@@ -110,9 +111,9 @@ class VolumeWriter(WriterBase):
     """
 
     fallback_to_npy: bool = True
-    nifti_affine: Optional[np.ndarray] = None
+    nifti_affine: np.ndarray | None = None
 
-    def write(self, array: np.ndarray, path: PathLike, *, meta: Optional[Mapping[str, Any]] = None) -> Path:  # noqa: ARG002
+    def write(self, array: np.ndarray, path: PathLike, *, meta: Mapping[str, Any] | None = None) -> Path:  # noqa: ARG002
         p = Path(path)
         p_str = str(p).lower()
 
@@ -137,7 +138,7 @@ class VolumeWriter(WriterBase):
         path: PathLike,
         *,
         channels_first: bool = True,
-        meta: Optional[Mapping[str, Any]] = None,
+        meta: Mapping[str, Any] | None = None,
     ) -> Path:
         """Write a 4D latent, preserving channel as 4th dim in NIfTI.
 
@@ -182,7 +183,7 @@ class AutoWriter(WriterBase):
     volume_writer: VolumeWriter = field(default_factory=VolumeWriter)
     png_writer: PngWriter = field(default_factory=PngWriter)
 
-    def write(self, array: np.ndarray, path: PathLike, *, meta: Optional[Mapping[str, Any]] = None) -> Path:
+    def write(self, array: np.ndarray, path: PathLike, *, meta: Mapping[str, Any] | None = None) -> Path:
         p = Path(path)
         s = str(p).lower()
         if s.endswith(".png"):

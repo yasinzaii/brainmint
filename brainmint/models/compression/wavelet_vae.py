@@ -1,16 +1,14 @@
-from pathlib import Path
-from typing import Any, List, Optional
 from collections.abc import Sequence
+from pathlib import Path
+from typing import Any
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from monai.networks.blocks import Convolution, SpatialAttentionBlock, Upsample 
-
+from monai.networks.blocks import Convolution, SpatialAttentionBlock, Upsample
 from monai.networks.nets.autoencoderkl import (
-    AutoencoderKL,
     AEKLDownsample,
     AEKLResBlock,
+    AutoencoderKL,
 )
 
 from brainmint.models.blocks.haar_dwt import (
@@ -67,7 +65,7 @@ class WaveletEncoder(nn.Module):
         self.wavelet_transform = TwoStageWaveletTransform(self.in_channels)
         self.wavelet_out_channels = self.wavelet_transform.out_channels
 
-        blocks: List[nn.Module] = []
+        blocks: list[nn.Module] = []
         # Initial convolution
         blocks.append(
             Convolution(
@@ -220,7 +218,7 @@ class WaveletDecoder(nn.Module):
 
         reversed_block_out_channels = list(reversed(channels))
 
-        blocks: List[nn.Module] = []
+        blocks: list[nn.Module] = []
 
         # Initial convolution
         blocks.append(
@@ -467,8 +465,8 @@ class WaveletVAE(nn.Module):
         *,
         autoencoder: nn.Module,
         ckpt_path: str | Path,
-        state_key: Optional[str] = "autoencoder",
-        loader: Optional[str] = None,
+        state_key: str | None = "autoencoder",
+        loader: str | None = None,
         strict: bool | str = True,
         freeze: bool = True,
         set_eval: bool = True,
