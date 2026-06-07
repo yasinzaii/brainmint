@@ -1,0 +1,93 @@
+# @package dataset
+
+# Minimal BrainScape config for package-safe tests.
+# Tests create a temporary BrainScape-like dataset with
+# tests.helpers.brainscape.make_minimal_brainscape_dataset(...)
+# and expose it through these environment variables:
+#
+#   BRAINMINT_TEST_BRAINSCAPE_JSON=<tmp json path>
+#   BRAINMINT_TEST_DATASET_ROOT=<tmp dataset root>
+
+brain_roi_size: [16, 16, 16]
+
+brainscape:
+  _target_: brainmint.data.brainscape.BrainScapeDataModule
+
+  json_path: ${oc.env:BRAINMINT_TEST_BRAINSCAPE_JSON}
+  dataset_root: ${oc.env:BRAINMINT_TEST_DATASET_ROOT}
+
+  train_tf: ${dataset.train_tf}
+  val_tf: ${dataset.val_tf}
+  test_tf: ${dataset.test_tf}
+
+  batch_size: 2
+  val_batch_size: 2
+  test_batch_size: 2
+
+  cache_rate: 0.0
+  num_workers: 0
+  prefetch_factor: null
+  subset_frac: null
+  seed: 42
+  pin_memory: false
+  persistent_workers: false
+
+  # Do not include seg as a normal MRI modality. Segmentation masks should be
+  # handled through a separate input spec when a test needs labels.
+  modalities: [t1w, t2w, t1ce, flair]
+
+  input_specs:
+    - key: image
+      group: preprocessed
+      modalities: [t1w, t2w, t1ce, flair]
+
+default_meta_keys:
+  - modality
+  - dataset
+  - subject
+
+conditioning:
+  modality_map:
+    t1w: 0
+    t2w: 1
+    t1ce: 2
+    flair: 3
+
+  modality_conditioning:
+    _target_: brainmint.data.transforms.conditioning.MapModalityToLabeld
+    mapping: ${dataset.conditioning.modality_map}
+    key_name: modality_map
+    allow_missing_keys: false
+    fail_on_unknown: true
+
+train_tf:
+  _target_: brainmint.data.transforms.mri_vae.VAETransform
+  is_train: true
+  random_aug: false
+  affine_type: original
+  patch_size: [16, 16, 16]
+  brain_roi_size: ${dataset.brain_roi_size}
+  output_dtype: float32
+  image_keys: [image]
+  label_keys: []
+  passthrough_keys: []
+  meta_keys: ${dataset.default_meta_keys}
+  extra_xforms_end:
+    - ${dataset.conditioning.modality_conditioning}
+
+val_tf:
+  _target_: brainmint.data.transforms.mri_vae.VAETransform
+  is_train: false
+  random_aug: false
+  affine_type: original
+  brain_roi_size: ${dataset.brain_roi_size}
+  val_patch_size: null
+  output_dtype: float32
+  image_keys: [image]
+  label_keys: []
+  passthrough_keys: []
+  meta_keys: ${dataset.default_meta_keys}
+  extra_xforms_end:
+    - ${dataset.conditioning.modality_conditioning}
+
+test_tf: ${dataset.val_tf}

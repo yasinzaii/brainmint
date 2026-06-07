@@ -1,0 +1,529 @@
+{
+    "train": [
+        {
+            "subject": "training-BraTS-GLI-00392-000",
+            "session": "",
+            "type": "",
+            "group": 0,
+            "preprocessed": {
+                "t2w": "training-BraTS-GLI-00392-000...0/norm_bet/BraTS-GLI-00392-000-t2w_t2w.nii.gz",
+                "t1w": "training-BraTS-GLI-00392-000...0/norm_bet/BraTS-GLI-00392-000-t1n_t1w.nii.gz",
+                "seg": "training-BraTS-GLI-00392-000...0/norm_bet/BraTS-GLI-00392-000-seg_seg.nii.gz",
+                "t1ce": "training-BraTS-GLI-00392-000...0/norm_bet/BraTS-GLI-00392-000-t1c_t1ce.nii.gz",
+                "flair": "training-BraTS-GLI-00392-000...0/norm_bet/BraTS-GLI-00392-000-t2f_flair.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "training-BraTS-GLI-00392-000",
+                "tumor": "Y"
+            },
+            "dataset": "BRATS"
+        },
+        {
+            "subject": "training-BraTS-GLI-00030-000",
+            "session": "",
+            "type": "",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "training-BraTS-GLI-00030-000...0/norm_bet/BraTS-GLI-00030-000-t1n_t1w.nii.gz",
+                "seg": "training-BraTS-GLI-00030-000...0/norm_bet/BraTS-GLI-00030-000-seg_seg.nii.gz",
+                "t1ce": "training-BraTS-GLI-00030-000...0/norm_bet/BraTS-GLI-00030-000-t1c_t1ce.nii.gz",
+                "flair": "training-BraTS-GLI-00030-000...0/norm_bet/BraTS-GLI-00030-000-t2f_flair.nii.gz",
+                "t2w": "training-BraTS-GLI-00030-000...0/norm_bet/BraTS-GLI-00030-000-t2w_t2w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "training-BraTS-GLI-00030-000",
+                "tumor": "Y"
+            },
+            "dataset": "BRATS"
+        },
+        {
+            "subject": "training-BraTS-GLI-01160-001",
+            "session": "",
+            "type": "",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "training-BraTS-GLI-01160-001...0/norm_bet/BraTS-GLI-01160-001-t1n_t1w.nii.gz",
+                "t2w": "training-BraTS-GLI-01160-001...0/norm_bet/BraTS-GLI-01160-001-t2w_t2w.nii.gz",
+                "flair": "training-BraTS-GLI-01160-001...0/norm_bet/BraTS-GLI-01160-001-t2f_flair.nii.gz",
+                "t1ce": "training-BraTS-GLI-01160-001...0/norm_bet/BraTS-GLI-01160-001-t1c_t1ce.nii.gz",
+                "seg": "training-BraTS-GLI-01160-001...0/norm_bet/BraTS-GLI-01160-001-seg_seg.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "training-BraTS-GLI-01160-001",
+                "tumor": "Y"
+            },
+            "dataset": "BRATS"
+        },
+        {
+            "subject": "sub-10674",
+            "session": "",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "sub-10674..anat.0/norm_bet/sub-10674_T1w_norm_bet_t1w.nii.gz",
+                "flair": "sub-10674..anat.0/norm_bet/sub-10674_FLAIR_norm_bet_flair.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-10674",
+                "age": "33",
+                "sex": "male",
+                "race": "2",
+                "handedness": "R"
+            },
+            "dataset": "SRPStudy"
+        },
+        {
+            "subject": "sub-10860",
+            "session": "",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "flair": "sub-10860..anat.0/norm_bet/sub-10860_FLAIR_norm_bet_flair.nii.gz",
+                "t1w": "sub-10860..anat.0/norm_bet/sub-10860_T1w_norm_bet_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-10860",
+                "age": "25",
+                "sex": "male",
+                "race": "1",
+                "handedness": "R"
+            },
+            "dataset": "SRPStudy"
+        },
+        {
+            "subject": "sub-10636",
+            "session": "",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "sub-10636..anat.0/norm_bet/sub-10636_T1w_norm_bet_t1w.nii.gz",
+                "flair": "sub-10636..anat.0/norm_bet/sub-10636_FLAIR_norm_bet_flair.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-10636",
+                "age": "27",
+                "sex": "female",
+                "race": "3",
+                "handedness": "L"
+            },
+            "dataset": "SRPStudy"
+        },
+        {
+            "subject": "sub-719524",
+            "session": "ses-01",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t2w": "sub-719524.ses-01.anat.0/norm_bet/sub-719524_ses-01_T2w_norm_bet_t2w.nii.gz",
+                "t1w": "sub-719524.ses-01.anat.0/norm_bet/sub-719524_ses-01_T1w_norm_bet_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-719524",
+                "age": "22.7",
+                "sex": "male",
+                "depression": "Y"
+            },
+            "dataset": "CMDD"
+        },
+        {
+            "subject": "sub-719351",
+            "session": "ses-01",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t2w": "sub-719351.ses-01.anat.0/norm_bet/sub-719351_ses-01_T2w_norm_bet_t2w.nii.gz",
+                "t1w": "sub-719351.ses-01.anat.0/norm_bet/sub-719351_ses-01_T1w_norm_bet_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-719351",
+                "age": "32.8",
+                "sex": "male",
+                "depression": "N"
+            },
+            "dataset": "CMDD"
+        },
+        {
+            "subject": "sub-NF13",
+            "session": "ses-2postEEG",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "sub-NF13.ses-2postEEG.anat.0/norm_bet/sub-NF13_ses-2postEEG_T1w_norm_bet_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-NF13",
+                "age": "39",
+                "sex": "male"
+            },
+            "dataset": "RSSE"
+        },
+        {
+            "subject": "sub-NF13",
+            "session": "ses-1preEEG",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "sub-NF13.ses-1preEEG.anat.0/norm_bet/sub-NF13_ses-1preEEG_T1w_norm_bet_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-NF13",
+                "age": "39",
+                "sex": "male"
+            },
+            "dataset": "RSSE"
+        },
+        {
+            "subject": "sub-control17",
+            "session": "ses-2postEEG",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "sub-control17.ses-2postEEG.anat.0/norm_bet/sub-control17_ses-2postEEG_T1w_norm_bet_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-control17",
+                "age": "29",
+                "sex": "male"
+            },
+            "dataset": "RSSE"
+        }
+    ],
+    "val": [
+        {
+            "subject": "sub-control16",
+            "session": "ses-1preEEG",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "sub-control16.ses-1preEEG.anat.0/norm_bet/sub-control16_ses-1preEEG_T1w_norm_bet_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-control16",
+                "age": "31",
+                "sex": "male"
+            },
+            "dataset": "RSSE"
+        },
+        {
+            "subject": "sub-control16",
+            "session": "ses-2postEEG",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "sub-control16.ses-2postEEG.anat.0/norm_bet/sub-control16_ses-2postEEG_T1w_norm_bet_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-control16",
+                "age": "31",
+                "sex": "male"
+            },
+            "dataset": "RSSE"
+        },
+        {
+            "subject": "sub-control02",
+            "session": "ses-1preEEG",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "sub-control02.ses-1preEEG.anat.0/norm_bet/sub-control02_ses-1preEEG_T1w_norm_bet_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-control02",
+                "age": "20",
+                "sex": "male"
+            },
+            "dataset": "RSSE"
+        },
+        {
+            "subject": "validation-BraTS-GLI-01704-000",
+            "session": "",
+            "type": "",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "validation-BraTS-GLI-01704-000...0/norm_bet/BraTS-GLI-01704-000-t1n_t1w.nii.gz",
+                "t2w": "validation-BraTS-GLI-01704-000...0/norm_bet/BraTS-GLI-01704-000-t2w_t2w.nii.gz",
+                "flair": "validation-BraTS-GLI-01704-000...0/norm_bet/BraTS-GLI-01704-000-t2f_flair.nii.gz",
+                "t1ce": "validation-BraTS-GLI-01704-000...0/norm_bet/BraTS-GLI-01704-000-t1c_t1ce.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "validation-BraTS-GLI-01704-000",
+                "tumor": "Y"
+            },
+            "dataset": "BRATS"
+        },
+        {
+            "subject": "validation-BraTS-GLI-00592-000",
+            "session": "",
+            "type": "",
+            "group": 0,
+            "preprocessed": {
+                "flair": "validation-BraTS-GLI-00592-000...0/norm_bet/BraTS-GLI-00592-000-t2f_flair.nii.gz",
+                "t1ce": "validation-BraTS-GLI-00592-000...0/norm_bet/BraTS-GLI-00592-000-t1c_t1ce.nii.gz",
+                "t2w": "validation-BraTS-GLI-00592-000...0/norm_bet/BraTS-GLI-00592-000-t2w_t2w.nii.gz",
+                "t1w": "validation-BraTS-GLI-00592-000...0/norm_bet/BraTS-GLI-00592-000-t1n_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "validation-BraTS-GLI-00592-000",
+                "tumor": "Y"
+            },
+            "dataset": "BRATS"
+        },
+        {
+            "subject": "validation-BraTS-GLI-00208-000",
+            "session": "",
+            "type": "",
+            "group": 0,
+            "preprocessed": {
+                "t1ce": "validation-BraTS-GLI-00208-000...0/norm_bet/BraTS-GLI-00208-000-t1c_t1ce.nii.gz",
+                "flair": "validation-BraTS-GLI-00208-000...0/norm_bet/BraTS-GLI-00208-000-t2f_flair.nii.gz",
+                "t1w": "validation-BraTS-GLI-00208-000...0/norm_bet/BraTS-GLI-00208-000-t1n_t1w.nii.gz",
+                "t2w": "validation-BraTS-GLI-00208-000...0/norm_bet/BraTS-GLI-00208-000-t2w_t2w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "validation-BraTS-GLI-00208-000",
+                "tumor": "Y"
+            },
+            "dataset": "BRATS"
+        },
+        {
+            "subject": "validation-BraTS-GLI-00681-000",
+            "session": "",
+            "type": "",
+            "group": 0,
+            "preprocessed": {
+                "flair": "validation-BraTS-GLI-00681-000...0/norm_bet/BraTS-GLI-00681-000-t2f_flair.nii.gz",
+                "t2w": "validation-BraTS-GLI-00681-000...0/norm_bet/BraTS-GLI-00681-000-t2w_t2w.nii.gz",
+                "t1ce": "validation-BraTS-GLI-00681-000...0/norm_bet/BraTS-GLI-00681-000-t1c_t1ce.nii.gz",
+                "t1w": "validation-BraTS-GLI-00681-000...0/norm_bet/BraTS-GLI-00681-000-t1n_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "validation-BraTS-GLI-00681-000",
+                "tumor": "Y"
+            },
+            "dataset": "BRATS"
+        },
+        {
+            "subject": "sub-719312",
+            "session": "ses-01",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t2w": "sub-719312.ses-01.anat.0/norm_bet/sub-719312_ses-01_T2w_norm_bet_t2w.nii.gz",
+                "t1w": "sub-719312.ses-01.anat.0/norm_bet/sub-719312_ses-01_T1w_norm_bet_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-719312",
+                "age": "36.4",
+                "sex": "female",
+                "depression": "N"
+            },
+            "dataset": "CMDD"
+        },
+        {
+            "subject": "sub-719329",
+            "session": "ses-01",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "sub-719329.ses-01.anat.0/norm_bet/sub-719329_ses-01_T1w_norm_bet_t1w.nii.gz",
+                "t2w": "sub-719329.ses-01.anat.0/norm_bet/sub-719329_ses-01_T2w_norm_bet_t2w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-719329",
+                "age": "19.3",
+                "sex": "female",
+                "depression": "N"
+            },
+            "dataset": "CMDD"
+        },
+        {
+            "subject": "sub-10529",
+            "session": "",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "sub-10529..anat.0/norm_bet/sub-10529_T1w_norm_bet_t1w.nii.gz",
+                "flair": "sub-10529..anat.0/norm_bet/sub-10529_FLAIR_norm_bet_flair.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-10529",
+                "age": "68",
+                "sex": "male",
+                "race": "1",
+                "handedness": "R"
+            },
+            "dataset": "SRPStudy"
+        },
+        {
+            "subject": "sub-10418",
+            "session": "",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "sub-10418..anat.0/norm_bet/sub-10418_T1w_norm_bet_t1w.nii.gz",
+                "flair": "sub-10418..anat.0/norm_bet/sub-10418_FLAIR_norm_bet_flair.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-10418",
+                "age": "68",
+                "sex": "female",
+                "race": "1",
+                "handedness": "R"
+            },
+            "dataset": "SRPStudy"
+        }
+    ],
+    "test": [
+        {
+            "subject": "sub-control03",
+            "session": "ses-1preEEG",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "sub-control03.ses-1preEEG.anat.0/norm_bet/sub-control03_ses-1preEEG_T1w_norm_bet_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-control03",
+                "age": "30",
+                "sex": "female"
+            },
+            "dataset": "RSSE"
+        },
+        {
+            "subject": "sub-control03",
+            "session": "ses-2postEEG",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "sub-control03.ses-2postEEG.anat.0/norm_bet/sub-control03_ses-2postEEG_T1w_norm_bet_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-control03",
+                "age": "30",
+                "sex": "female"
+            },
+            "dataset": "RSSE"
+        },
+        {
+            "subject": "validation-BraTS-GLI-00256-000",
+            "session": "",
+            "type": "",
+            "group": 0,
+            "preprocessed": {
+                "t2w": "validation-BraTS-GLI-00256-000...0/norm_bet/BraTS-GLI-00256-000-t2w_t2w.nii.gz",
+                "flair": "validation-BraTS-GLI-00256-000...0/norm_bet/BraTS-GLI-00256-000-t2f_flair.nii.gz",
+                "t1ce": "validation-BraTS-GLI-00256-000...0/norm_bet/BraTS-GLI-00256-000-t1c_t1ce.nii.gz",
+                "t1w": "validation-BraTS-GLI-00256-000...0/norm_bet/BraTS-GLI-00256-000-t1n_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "validation-BraTS-GLI-00256-000",
+                "tumor": "Y"
+            },
+            "dataset": "BRATS"
+        },
+        {
+            "subject": "validation-BraTS-GLI-01682-000",
+            "session": "",
+            "type": "",
+            "group": 0,
+            "preprocessed": {
+                "t2w": "validation-BraTS-GLI-01682-000...0/norm_bet/BraTS-GLI-01682-000-t2w_t2w.nii.gz",
+                "t1w": "validation-BraTS-GLI-01682-000...0/norm_bet/BraTS-GLI-01682-000-t1n_t1w.nii.gz",
+                "t1ce": "validation-BraTS-GLI-01682-000...0/norm_bet/BraTS-GLI-01682-000-t1c_t1ce.nii.gz",
+                "flair": "validation-BraTS-GLI-01682-000...0/norm_bet/BraTS-GLI-01682-000-t2f_flair.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "validation-BraTS-GLI-01682-000",
+                "tumor": "Y"
+            },
+            "dataset": "BRATS"
+        },
+        {
+            "subject": "validation-BraTS-GLI-00603-000",
+            "session": "",
+            "type": "",
+            "group": 0,
+            "preprocessed": {
+                "t1ce": "validation-BraTS-GLI-00603-000...0/norm_bet/BraTS-GLI-00603-000-t1c_t1ce.nii.gz",
+                "t2w": "validation-BraTS-GLI-00603-000...0/norm_bet/BraTS-GLI-00603-000-t2w_t2w.nii.gz",
+                "flair": "validation-BraTS-GLI-00603-000...0/norm_bet/BraTS-GLI-00603-000-t2f_flair.nii.gz",
+                "t1w": "validation-BraTS-GLI-00603-000...0/norm_bet/BraTS-GLI-00603-000-t1n_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "validation-BraTS-GLI-00603-000",
+                "tumor": "Y"
+            },
+            "dataset": "BRATS"
+        },
+        {
+            "subject": "validation-BraTS-GLI-01748-000",
+            "session": "",
+            "type": "",
+            "group": 0,
+            "preprocessed": {
+                "t1ce": "validation-BraTS-GLI-01748-000...0/norm_bet/BraTS-GLI-01748-000-t1c_t1ce.nii.gz",
+                "t2w": "validation-BraTS-GLI-01748-000...0/norm_bet/BraTS-GLI-01748-000-t2w_t2w.nii.gz",
+                "flair": "validation-BraTS-GLI-01748-000...0/norm_bet/BraTS-GLI-01748-000-t2f_flair.nii.gz",
+                "t1w": "validation-BraTS-GLI-01748-000...0/norm_bet/BraTS-GLI-01748-000-t1n_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "validation-BraTS-GLI-01748-000",
+                "tumor": "Y"
+            },
+            "dataset": "BRATS"
+        },
+        {
+            "subject": "sub-719526",
+            "session": "ses-01",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "sub-719526.ses-01.anat.0/norm_bet/sub-719526_ses-01_T1w_norm_bet_t1w.nii.gz",
+                "t2w": "sub-719526.ses-01.anat.0/norm_bet/sub-719526_ses-01_T2w_norm_bet_t2w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-719526",
+                "age": "24.4",
+                "sex": "female",
+                "depression": "Y"
+            },
+            "dataset": "CMDD"
+        },
+        {
+            "subject": "sub-10977",
+            "session": "",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "flair": "sub-10977..anat.0/norm_bet/sub-10977_FLAIR_norm_bet_flair.nii.gz",
+                "t1w": "sub-10977..anat.0/norm_bet/sub-10977_T1w_norm_bet_t1w.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-10977",
+                "age": "41",
+                "sex": "female",
+                "race": "1",
+                "handedness": "R"
+            },
+            "dataset": "SRPStudy"
+        },
+        {
+            "subject": "sub-10486",
+            "session": "",
+            "type": "anat",
+            "group": 0,
+            "preprocessed": {
+                "t1w": "sub-10486..anat.0/norm_bet/sub-10486_T1w_norm_bet_t1w.nii.gz",
+                "flair": "sub-10486..anat.0/norm_bet/sub-10486_FLAIR_norm_bet_flair.nii.gz"
+            },
+            "demographics": {
+                "participant_id": "sub-10486",
+                "age": "42",
+                "sex": "female",
+                "race": "1",
+                "handedness": "R"
+            },
+            "dataset": "SRPStudy"
+        }
+    ]
+}
